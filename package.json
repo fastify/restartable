@@ -1,0 +1,35 @@
+{
+  "name": "@fastify/restartable",
+  "version": "0.0.1",
+  "description": "Restart Fastify without losing a request",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard | snazzy && tap test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fastify/restartable.git"
+  },
+  "keywords": [
+    "fastify",
+    "restart",
+    "http",
+    "graceful"
+  ],
+  "author": "Matteo Collina <hello@matteocollina.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fastify/restartable/issues"
+  },
+  "homepage": "https://github.com/fastify/restartable#readme",
+  "devDependencies": {
+    "@fastify/pre-commit": "^2.0.2",
+    "snazzy": "^9.0.0",
+    "standard": "^16.0.4",
+    "tap": "^15.1.6",
+    "undici": "^4.14.1"
+  },
+  "dependencies": {
+    "fastify": "^3.27.2"
+  }
+}
