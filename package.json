@@ -25,7 +25,7 @@
   "devDependencies": {
     "@fastify/pre-commit": "^2.0.2",
     "snazzy": "^9.0.0",
-    "standard": "^16.0.4",
+    "standard": "^17.0.0-2",
     "tap": "^15.1.6",
     "undici": "^4.14.1"
   },
