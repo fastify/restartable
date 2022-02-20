@@ -88,3 +88,26 @@ test('wrong protocol', async function (t) {
     })
   }, /Unknown Protocol foobar/)
 })
+
+test('restart from a route', async ({ pass, teardown, plan, same, equal }) => {
+  plan(3)
+
+  async function myApp (app, opts) {
+    pass('application loaded')
+    app.get('/restart', async (req, reply) => {
+      await app.restart()
+      return { hello: 'world' }
+    })
+  }
+
+  const { stop, port } = await start({
+    port: 0,
+    app: myApp
+  })
+  teardown(stop)
+
+  {
+    const res = await request(`http://localhost:${port}/restart`)
+    same(await res.body.json(), { hello: 'world' })
+  }
+})

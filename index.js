@@ -7,7 +7,7 @@ async function start (opts) {
   const serverWrapper = buildServer(opts)
 
   const res = {
-    app: await (spinUpFastify(opts, serverWrapper).ready()),
+    app: await (spinUpFastify(opts, serverWrapper, restart).ready()),
     restart,
     get address () {
       return serverWrapper.address
@@ -26,7 +26,7 @@ async function start (opts) {
   async function restart () {
     const old = res.app
     const oldHandler = serverWrapper.server.handler
-    const newApp = spinUpFastify(opts, serverWrapper)
+    const newApp = spinUpFastify(opts, serverWrapper, restart)
     await newApp.ready()
     old.server.removeListener('request', oldHandler)
     newApp.server.on('request', newApp.server.handler)
@@ -42,7 +42,7 @@ async function start (opts) {
   }
 }
 
-function spinUpFastify (opts, serverWrapper) {
+function spinUpFastify (opts, serverWrapper, restart) {
   const server = serverWrapper.server
   const _opts = Object.assign({}, opts)
   _opts.serverFactory = function (handler) {
@@ -50,6 +50,8 @@ function spinUpFastify (opts, serverWrapper) {
     return server
   }
   const app = Fastify(_opts)
+
+  app.decorate('restart', restart)
 
   app.register(opts.app)
 
