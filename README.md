@@ -4,7 +4,7 @@ Restart Fastify without losing a request.
 
 This module is useful if you want to compose the
 fastify routes dynamically or you need some remote
-config. In case of a change, you can restart Fastify. In case of a change, you can restart Fastify.
+config. In case of a change, you can restart Fastify.
 
 ## Install
 
