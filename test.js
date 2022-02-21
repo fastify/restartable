@@ -15,19 +15,22 @@ setGlobalDispatcher(new Agent({
 }))
 
 test('restart fastify', async ({ pass, teardown, plan, same, equal }) => {
-  plan(5)
+  plan(7)
+
+  const _opts = {
+    port: 0,
+    app: myApp
+  }
 
   async function myApp (app, opts) {
     pass('application loaded')
+    equal(opts, _opts)
     app.get('/', async (req, reply) => {
       return { hello: 'world' }
     })
   }
 
-  const { stop, restart, port, address } = await start({
-    port: 0,
-    app: myApp
-  })
+  const { stop, restart, port, address } = await start(_opts)
   teardown(stop)
 
   equal(address, '127.0.0.1')

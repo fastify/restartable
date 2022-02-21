@@ -18,7 +18,8 @@ npm i @fastify/restartable
 import { start } from '@fastify/restartable'
 
 async function myApp (app, opts) {
-  console.log('plugin loaded')
+  // opts are the options passed to start()
+  console.log('plugin loaded', opts)
 
   app.get('/restart', async (req, reply) => {
     await app.restart()

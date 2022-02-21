@@ -53,7 +53,7 @@ function spinUpFastify (opts, serverWrapper, restart) {
 
   app.decorate('restart', restart)
 
-  app.register(opts.app)
+  app.register(opts.app, opts)
 
   return app
 }
