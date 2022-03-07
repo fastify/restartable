@@ -6,20 +6,37 @@ const buildServer = require('./lib/server')
 async function start (opts) {
   const serverWrapper = buildServer(opts)
 
+  let listening = false
   const res = {
     app: await (spinUpFastify(opts, serverWrapper, restart).ready()),
     restart,
     get address () {
+      if (!listening) {
+        throw new Error('Server is not listening')
+      }
       return serverWrapper.address
     },
     get port () {
+      if (!listening) {
+        throw new Error('Server is not listening')
+      }
       return serverWrapper.port
+    },
+    inject (...args) {
+      return res.app.inject(...args)
+    },
+    async listen () {
+      await serverWrapper.listen()
+      listening = true
+      return {
+        address: serverWrapper.address,
+        port: serverWrapper.port
+      }
     },
     stop
   }
 
   res.app.server.on('request', res.app.server.handler)
-  await serverWrapper.listen()
 
   return res
 
@@ -35,10 +52,12 @@ async function start (opts) {
   }
 
   async function stop () {
-    await Promise.all([
-      serverWrapper.close(),
-      res.app.close()
-    ])
+    const toClose = []
+    if (listening) {
+      toClose.push(serverWrapper.close())
+    }
+    toClose.push(res.app.close())
+    await Promise.all(toClose)
   }
 }
 
