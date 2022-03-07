@@ -27,7 +27,7 @@ async function myApp (app, opts) {
   })
 }
 
-const { stop, port, restart, address } = await start({
+const { stop, restart, listen, inject } = await start({
   protocol: 'http', // or 'https'
   // key: ...,
   // cert: ...,
@@ -37,8 +37,12 @@ const { stop, port, restart, address } = await start({
   app: myApp
 })
 
+const { address, port } = await listen()
+
 console.log('server listening on', address, port)
 // call restart() if you want to restart
+
+// call inject() to inject a request, see Fastify docs
 ```
 
 ## License

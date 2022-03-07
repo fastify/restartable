@@ -15,7 +15,7 @@ setGlobalDispatcher(new Agent({
 }))
 
 test('restart fastify', async ({ pass, teardown, plan, same, equal }) => {
-  plan(7)
+  plan(9)
 
   const _opts = {
     port: 0,
@@ -30,10 +30,15 @@ test('restart fastify', async ({ pass, teardown, plan, same, equal }) => {
     })
   }
 
-  const { stop, restart, port, address } = await start(_opts)
+  const server = await start(_opts)
+  const { stop, restart, listen } = server
   teardown(stop)
 
+  const { port, address } = await listen()
+
   equal(address, '127.0.0.1')
+  equal(port, server.port)
+  equal(address, server.address)
 
   {
     const res = await request(`http://localhost:${port}`)
@@ -58,7 +63,7 @@ test('https', async ({ pass, teardown, plan, same, equal }) => {
     })
   }
 
-  const { stop, restart, port, address } = await start({
+  const { listen, stop, restart } = await start({
     port: 0,
     protocol: 'https',
     key: await readFile(path.join(__dirname, 'fixtures', 'key.pem')),
@@ -66,6 +71,8 @@ test('https', async ({ pass, teardown, plan, same, equal }) => {
     app: myApp
   })
   teardown(stop)
+
+  const { address, port } = await listen()
 
   equal(address, '127.0.0.1')
 
@@ -103,14 +110,48 @@ test('restart from a route', async ({ pass, teardown, plan, same, equal }) => {
     })
   }
 
-  const { stop, port } = await start({
+  const { stop, listen } = await start({
+    port: 0,
+    app: myApp
+  })
+  teardown(stop)
+
+  const { port } = await listen()
+
+  {
+    const res = await request(`http://localhost:${port}/restart`)
+    same(await res.body.json(), { hello: 'world' })
+  }
+})
+
+test('inject', async ({ pass, teardown, plan, same, equal }) => {
+  plan(3)
+
+  async function myApp (app, opts) {
+    pass('application loaded')
+    app.get('/restart', async (req, reply) => {
+      await app.restart()
+      return { hello: 'world' }
+    })
+  }
+
+  const { stop, inject } = await start({
     port: 0,
     app: myApp
   })
   teardown(stop)
 
   {
-    const res = await request(`http://localhost:${port}/restart`)
-    same(await res.body.json(), { hello: 'world' })
+    const res = await inject('/restart')
+    same(res.json(), { hello: 'world' })
   }
+})
+
+test('not listening', async function (t) {
+  const res = await start({
+    app: async () => {}
+  })
+
+  t.throws(() => res.address, /not listening/)
+  t.throws(() => res.port, /not listening/)
 })
