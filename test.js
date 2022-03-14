@@ -5,6 +5,8 @@ const { start } = require('.')
 const { request, setGlobalDispatcher, Agent } = require('undici')
 const path = require('path')
 const { readFile } = require('fs').promises
+const split = require('split2')
+const { once } = require('events')
 
 setGlobalDispatcher(new Agent({
   keepAliveTimeout: 10,
@@ -154,4 +156,45 @@ test('not listening', async function (t) {
 
   t.throws(() => res.address, /not listening/)
   t.throws(() => res.port, /not listening/)
+})
+
+test('logger', async ({ pass, teardown, plan, same, equal }) => {
+  const stream = split(JSON.parse)
+
+  const _opts = {
+    port: 0,
+    app: myApp,
+    logger: {
+      stream
+    }
+  }
+
+  async function myApp (app, opts) {
+    pass('application loaded')
+    equal(opts, _opts)
+    app.get('/', async (req, reply) => {
+      return { hello: 'world' }
+    })
+  }
+
+  const server = await start(_opts)
+  const { stop, listen } = server
+  teardown(stop)
+
+  const { port, address } = await listen()
+
+  {
+    const [{ level, msg, url }] = await once(stream, 'data')
+    equal(level, 30)
+    equal(url, `http://${address}:${port}`)
+    equal(msg, 'server listening')
+  }
+
+  await stop()
+
+  {
+    const [{ level, msg }] = await once(stream, 'data')
+    equal(level, 30)
+    equal(msg, 'server stopped')
+  }
 })

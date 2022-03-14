@@ -7,6 +7,7 @@ async function start (opts) {
   const serverWrapper = buildServer(opts)
 
   let listening = false
+  let stopped = false
   const res = {
     app: await (spinUpFastify(opts, serverWrapper, restart).ready()),
     restart,
@@ -28,6 +29,7 @@ async function start (opts) {
     async listen () {
       await serverWrapper.listen()
       listening = true
+      res.app.log.info({ url: `${opts.protocol || 'http'}://${serverWrapper.address}:${serverWrapper.port}` }, 'server listening')
       return {
         address: serverWrapper.address,
         port: serverWrapper.port
@@ -52,12 +54,17 @@ async function start (opts) {
   }
 
   async function stop () {
+    if (stopped) {
+      return
+    }
+    stopped = true
     const toClose = []
     if (listening) {
       toClose.push(serverWrapper.close())
     }
     toClose.push(res.app.close())
     await Promise.all(toClose)
+    res.app.log.info('server stopped')
   }
 }
 
