@@ -41,6 +41,8 @@ const { address, port } = await listen()
 
 console.log('server listening on', address, port)
 // call restart() if you want to restart
+// call restart(newOpts) if you want to restart Fastify with new options
+// you can't change all the protocol details.
 
 // call inject() to inject a request, see Fastify docs
 ```

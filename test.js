@@ -27,7 +27,7 @@ test('restart fastify', async ({ pass, teardown, plan, same, equal }) => {
   async function myApp (app, opts) {
     pass('application loaded')
     equal(opts, _opts)
-    app.get('/', async (req, reply) => {
+    app.get('/', async () => {
       return { hello: 'world' }
     })
   }
@@ -158,7 +158,7 @@ test('not listening', async function (t) {
   t.throws(() => res.port, /not listening/)
 })
 
-test('logger', async ({ pass, teardown, plan, same, equal }) => {
+test('logger', async ({ pass, teardown, equal }) => {
   const stream = split(JSON.parse)
 
   const _opts = {
@@ -172,7 +172,7 @@ test('logger', async ({ pass, teardown, plan, same, equal }) => {
   async function myApp (app, opts) {
     pass('application loaded')
     equal(opts, _opts)
-    app.get('/', async (req, reply) => {
+    app.get('/', async () => {
       return { hello: 'world' }
     })
   }
@@ -197,4 +197,30 @@ test('logger', async ({ pass, teardown, plan, same, equal }) => {
     equal(level, 30)
     equal(msg, 'server stopped')
   }
+})
+
+test('change opts', async ({ teardown, plan, equal }) => {
+  plan(2)
+
+  const _opts = {
+    port: 0,
+    app: myApp
+  }
+
+  const expected = [undefined, 'bar']
+
+  async function myApp (_, opts) {
+    equal(opts.foo, expected.shift())
+  }
+
+  const server = await start(_opts)
+  const { stop, restart, listen } = server
+  teardown(stop)
+
+  await listen()
+
+  await restart({
+    foo: 'bar',
+    app: myApp
+  })
 })

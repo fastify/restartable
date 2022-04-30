@@ -42,10 +42,10 @@ async function start (opts) {
 
   return res
 
-  async function restart () {
+  async function restart (_opts = opts) {
     const old = res.app
     const oldHandler = serverWrapper.server.handler
-    const newApp = spinUpFastify(opts, serverWrapper, restart)
+    const newApp = spinUpFastify(_opts, serverWrapper, restart)
     await newApp.ready()
     old.server.removeListener('request', oldHandler)
     newApp.server.on('request', newApp.server.handler)
