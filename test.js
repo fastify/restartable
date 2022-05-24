@@ -43,14 +43,14 @@ test('restart fastify', async ({ pass, teardown, plan, same, equal }) => {
   equal(address, server.address)
 
   {
-    const res = await request(`http://localhost:${port}`)
+    const res = await request(`http://127.0.0.1:${port}`)
     same(await res.body.json(), { hello: 'world' })
   }
 
   await restart()
 
   {
-    const res = await request(`http://localhost:${port}`)
+    const res = await request(`http://127.0.0.1:${port}`)
     same(await res.body.json(), { hello: 'world' })
   }
 })
@@ -79,14 +79,14 @@ test('https', async ({ pass, teardown, plan, same, equal }) => {
   equal(address, '127.0.0.1')
 
   {
-    const res = await request(`https://localhost:${port}`)
+    const res = await request(`https://127.0.0.1:${port}`)
     same(await res.body.json(), { hello: 'world' })
   }
 
   await restart()
 
   {
-    const res = await request(`https://localhost:${port}`)
+    const res = await request(`https://127.0.0.1:${port}`)
     same(await res.body.json(), { hello: 'world' })
   }
 })
@@ -121,7 +121,7 @@ test('restart from a route', async ({ pass, teardown, plan, same, equal }) => {
   const { port } = await listen()
 
   {
-    const res = await request(`http://localhost:${port}/restart`)
+    const res = await request(`http://127.0.0.1:${port}/restart`)
     same(await res.body.json(), { hello: 'world' })
   }
 })
