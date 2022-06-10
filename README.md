@@ -15,31 +15,31 @@ npm i @fastify/restartable
 ## Usage
 
 ```js
-import { start } from '@fastify/restartable'
+import { start } from "@fastify/restartable";
 
-async function myApp (app, opts) {
+async function myApp(app, opts) {
   // opts are the options passed to start()
-  console.log('plugin loaded', opts)
+  console.log("plugin loaded", opts);
 
-  app.get('/restart', async (req, reply) => {
-    await app.restart()
-    return { status: 'ok' }
-  })
+  app.get("/restart", async (req, reply) => {
+    await app.restart();
+    return { status: "ok" };
+  });
 }
 
 const { stop, restart, listen, inject } = await start({
-  protocol: 'http', // or 'https'
+  protocol: "http", // or 'https'
   // key: ...,
   // cert: ...,
   // add all other options that you would pass to fastify
-  host: '127.0.0.1',
+  hostname: "0.0.0.0",
   port: 3000,
-  app: myApp
-})
+  app: myApp,
+});
 
-const { address, port } = await listen()
+const { address, port } = await listen();
 
-console.log('server listening on', address, port)
+console.log("server listening on", address, port);
 // call restart() if you want to restart
 // call restart(newOpts) if you want to restart Fastify with new options
 // you can't change all the protocol details.
