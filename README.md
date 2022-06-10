@@ -32,7 +32,7 @@ const { stop, restart, listen, inject } = await start({
   // key: ...,
   // cert: ...,
   // add all other options that you would pass to fastify
-  host: '127.0.0.1',
+  hostname: '0.0.0.0',
   port: 3000,
   app: myApp
 })
