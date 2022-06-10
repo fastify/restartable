@@ -6,6 +6,7 @@
   "scripts": {
     "test": "standard | snazzy && tap test.js"
   },
+  "types": "types/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fastify/restartable.git"
