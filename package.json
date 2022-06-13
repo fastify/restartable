@@ -4,8 +4,9 @@
   "description": "Restart Fastify without losing a request",
   "main": "index.js",
   "scripts": {
-    "test": "standard | snazzy && tap test.js"
+    "test": "standard | snazzy && tap test/test.js && tsd"
   },
+  "types": "index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fastify/restartable.git"
@@ -28,10 +29,14 @@
     "split2": "^4.1.0",
     "standard": "^17.0.0-2",
     "tap": "^16.0.0",
-    "undici": "^5.0.0"
+    "undici": "^5.0.0",
+    "tsd": "^0.20.0"
   },
   "dependencies": {
     "@fastify/error": "^3.0.0",
     "fastify": "^4.0.2"
+  },
+  "tsd": {
+    "directory": "test/types"
   }
 }

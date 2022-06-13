@@ -1,7 +1,7 @@
 'use strict'
 
 const { test } = require('tap')
-const { start } = require('.')
+const { start } = require('..')
 const { request, setGlobalDispatcher, Agent } = require('undici')
 const path = require('path')
 const { readFile } = require('fs').promises
