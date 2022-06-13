@@ -4,8 +4,7 @@
   "description": "Restart Fastify without losing a request",
   "main": "index.js",
   "scripts": {
-    "test": "standard | snazzy && tap test/test.js",
-    "test:tsd": "tsd"
+    "test": "standard | snazzy && tap test/test.js && tsd"
   },
   "types": "index.d.ts",
   "repository": {
