@@ -5,6 +5,12 @@ import {
   LightMyRequestResponse,
 } from 'fastify'
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    restart: () => Promise<void>
+  }
+}
+
 export type FastifyRestartableOptions = FastifyServerOptions & {
   port: number
   hostname?: string
