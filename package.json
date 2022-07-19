@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/fastify/restartable#readme",
   "devDependencies": {
+    "@types/node": "^18.0.6",
     "@fastify/pre-commit": "^2.0.2",
     "snazzy": "^9.0.0",
     "split2": "^4.1.0",

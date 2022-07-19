@@ -4,6 +4,7 @@ import { FastifyRestartableOptions, start } from '../..'
 
 const myApp = async (app: FastifyInstance, opts: FastifyRestartableOptions) => {
   app.get('/', async () => {
+    expectType<() => Promise<void>>(app.restart)
     return { hello: 'world' }
   })
 }
