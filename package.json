@@ -1,6 +1,6 @@
 {
   "name": "@fastify/restartable",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Restart Fastify without losing a request",
   "main": "index.js",
   "scripts": {
