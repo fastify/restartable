@@ -45,10 +45,15 @@ async function start (opts) {
   async function restart (_opts = opts) {
     const old = res.app
     const oldHandler = serverWrapper.server.handler
+    const clientErrorListeners = old.server.listeners('clientError')
     const newApp = spinUpFastify(_opts, serverWrapper, restart)
     await newApp.ready()
     old.server.removeListener('request', oldHandler)
+    old.server.removeListener('request', oldHandler)
     newApp.server.on('request', newApp.server.handler)
+    for (const listener of clientErrorListeners) {
+      old.server.removeListener('clientError', listener)
+    }
     res.app = newApp
     await old.close()
   }

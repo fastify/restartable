@@ -224,3 +224,35 @@ test('change opts', async ({ teardown, plan, equal }) => {
     app: myApp
   })
 })
+
+test('no warnings', async ({ pass, teardown, plan, same, equal, fail }) => {
+  plan(12)
+
+  const _opts = {
+    port: 0,
+    app: myApp
+  }
+
+  async function myApp (app, opts) {
+    pass('application loaded')
+  }
+
+  const onWarning = (warning) => {
+    fail(warning.message)
+  }
+
+  process.on('warning', onWarning)
+  teardown(() => {
+    process.removeListener('warning', onWarning)
+  })
+
+  const server = await start(_opts)
+  const { stop, restart, listen } = server
+  teardown(stop)
+
+  await listen()
+
+  for (let i = 0; i < 11; i++) {
+    await restart()
+  }
+})
