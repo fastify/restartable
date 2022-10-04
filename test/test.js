@@ -17,7 +17,7 @@ setGlobalDispatcher(new Agent({
 }))
 
 test('restart fastify', async ({ pass, teardown, plan, same, equal }) => {
-  plan(9)
+  plan(11)
 
   const _opts = {
     port: 0,
@@ -33,6 +33,9 @@ test('restart fastify', async ({ pass, teardown, plan, same, equal }) => {
   }
 
   const server = await start(_opts)
+
+  same(server.app.restarted, false)
+
   const { stop, restart, listen } = server
   teardown(stop)
 
@@ -48,6 +51,7 @@ test('restart fastify', async ({ pass, teardown, plan, same, equal }) => {
   }
 
   await restart()
+  same(server.app.restarted, true)
 
   {
     const res = await request(`http://127.0.0.1:${port}`)
