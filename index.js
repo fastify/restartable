@@ -9,7 +9,7 @@ async function start (opts) {
   let listening = false
   let stopped = false
   const res = {
-    app: await (spinUpFastify(opts, serverWrapper, restart).ready()),
+    app: await (spinUpFastify(opts, serverWrapper, restart, true).ready()),
     restart,
     get address () {
       if (!listening) {
@@ -55,6 +55,7 @@ async function start (opts) {
       old.server.removeListener('clientError', listener)
     }
     res.app = newApp
+
     await old.close()
   }
 
@@ -73,7 +74,7 @@ async function start (opts) {
   }
 }
 
-function spinUpFastify (opts, serverWrapper, restart) {
+function spinUpFastify (opts, serverWrapper, restart, isStart = false) {
   const server = serverWrapper.server
   const _opts = Object.assign({}, opts)
   _opts.serverFactory = function (handler) {
@@ -83,7 +84,7 @@ function spinUpFastify (opts, serverWrapper, restart) {
   const app = Fastify(_opts)
 
   app.decorate('restart', restart)
-
+  app.decorate('restarted', !isStart)
   app.register(opts.app, opts)
 
   return app
