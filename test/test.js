@@ -260,3 +260,56 @@ test('no warnings', async ({ pass, teardown, plan, same, equal, fail }) => {
     await restart()
   }
 })
+
+test('restart fastify after a failed start', async ({ pass, teardown, plan, same, equal, rejects }) => {
+  plan(11)
+
+  const _opts = {
+    port: 0,
+    app: myApp
+  }
+
+  let count = 0
+
+  async function myApp (app, opts) {
+    pass('application loaded')
+    equal(opts, _opts)
+
+    app.register(async function () {
+      if (count++ % 2) {
+        throw new Error('kaboom')
+      }
+    })
+    app.get('/', async () => {
+      return { hello: 'world' }
+    })
+  }
+
+  const server = await start(_opts)
+
+  same(server.app.restarted, false)
+
+  const { stop, restart, listen } = server
+  teardown(stop)
+
+  const { port } = await listen()
+
+  {
+    const res = await request(`http://127.0.0.1:${port}`)
+    same(await res.body.json(), { hello: 'world' })
+  }
+
+  await rejects(restart())
+
+  {
+    const res = await request(`http://127.0.0.1:${port}`)
+    same(await res.body.json(), { hello: 'world' })
+  }
+
+  await restart()
+
+  {
+    const res = await request(`http://127.0.0.1:${port}`)
+    same(await res.body.json(), { hello: 'world' })
+  }
+})

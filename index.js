@@ -8,6 +8,8 @@ async function start (opts) {
 
   let listening = false
   let stopped = false
+  let handler
+
   const res = {
     app: await (spinUpFastify(opts, serverWrapper, restart, true).ready()),
     restart,
@@ -38,25 +40,37 @@ async function start (opts) {
     stop
   }
 
-  res.app.server.on('request', res.app.server.handler)
+  res.app.server.on('request', handler)
 
   return res
 
   async function restart (_opts = opts) {
     const old = res.app
-    const oldHandler = serverWrapper.server.handler
+    const oldHandler = handler
     const clientErrorListeners = old.server.listeners('clientError')
     const newApp = spinUpFastify(_opts, serverWrapper, restart)
-    await newApp.ready()
-    old.server.removeListener('request', oldHandler)
-    old.server.removeListener('request', oldHandler)
-    newApp.server.on('request', newApp.server.handler)
-    for (const listener of clientErrorListeners) {
-      old.server.removeListener('clientError', listener)
-    }
-    res.app = newApp
+    try {
+      await newApp.ready()
+      old.server.removeListener('request', oldHandler)
+      old.server.removeListener('request', oldHandler)
+      newApp.server.on('request', handler)
+      for (const listener of clientErrorListeners) {
+        old.server.removeListener('clientError', listener)
+      }
+      res.app = newApp
 
-    await old.close()
+      await old.close()
+    } catch (err) {
+      const listenersNow = newApp.server.listeners('clientError')
+      handler = oldHandler
+      for (const listener of listenersNow) {
+        if (clientErrorListeners.indexOf(listener) === -1) {
+          old.server.removeListener('clientError', listener)
+        }
+      }
+      await newApp.close()
+      throw err
+    }
   }
 
   async function stop () {
@@ -72,22 +86,22 @@ async function start (opts) {
     await Promise.all(toClose)
     res.app.log.info('server stopped')
   }
-}
 
-function spinUpFastify (opts, serverWrapper, restart, isStart = false) {
-  const server = serverWrapper.server
-  const _opts = Object.assign({}, opts)
-  _opts.serverFactory = function (handler) {
-    server.handler = handler
-    return server
+  function spinUpFastify (opts, serverWrapper, restart, isStart = false) {
+    const server = serverWrapper.server
+    const _opts = Object.assign({}, opts)
+    _opts.serverFactory = function (_handler) {
+      handler = _handler
+      return server
+    }
+    const app = Fastify(_opts)
+
+    app.decorate('restart', restart)
+    app.decorate('restarted', !isStart)
+    app.register(opts.app, opts)
+
+    return app
   }
-  const app = Fastify(_opts)
-
-  app.decorate('restart', restart)
-  app.decorate('restarted', !isStart)
-  app.register(opts.app, opts)
-
-  return app
 }
 
 module.exports = {
