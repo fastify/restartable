@@ -8,6 +8,8 @@ async function start (opts) {
 
   let listening = false
   let stopped = false
+  let handler
+
   const res = {
     app: await (spinUpFastify(opts, serverWrapper, restart, true).ready()),
     restart,
@@ -38,19 +40,35 @@ async function start (opts) {
     stop
   }
 
-  res.app.server.on('request', res.app.server.handler)
+  res.app.server.on('request', handler)
 
   return res
 
   async function restart (_opts = opts) {
     const old = res.app
-    const oldHandler = serverWrapper.server.handler
+    const oldHandler = handler
     const clientErrorListeners = old.server.listeners('clientError')
     const newApp = spinUpFastify(_opts, serverWrapper, restart)
-    await newApp.ready()
+    try {
+      await newApp.ready()
+    } catch (err) {
+      const listenersNow = newApp.server.listeners('clientError')
+      handler = oldHandler
+      // Creating a new Fastify apps adds one clientError listener
+      // Let's remove all the new ones
+      for (const listener of listenersNow) {
+        if (clientErrorListeners.indexOf(listener) === -1) {
+          old.server.removeListener('clientError', listener)
+        }
+      }
+      await newApp.close()
+      throw err
+    }
+
+    // Remove the old handler and add the new one
+    // the handler variable was updated in the spinUpFastify function
     old.server.removeListener('request', oldHandler)
-    old.server.removeListener('request', oldHandler)
-    newApp.server.on('request', newApp.server.handler)
+    newApp.server.on('request', handler)
     for (const listener of clientErrorListeners) {
       old.server.removeListener('clientError', listener)
     }
@@ -72,22 +90,22 @@ async function start (opts) {
     await Promise.all(toClose)
     res.app.log.info('server stopped')
   }
-}
 
-function spinUpFastify (opts, serverWrapper, restart, isStart = false) {
-  const server = serverWrapper.server
-  const _opts = Object.assign({}, opts)
-  _opts.serverFactory = function (handler) {
-    server.handler = handler
-    return server
+  function spinUpFastify (opts, serverWrapper, restart, isStart = false) {
+    const server = serverWrapper.server
+    const _opts = Object.assign({}, opts)
+    _opts.serverFactory = function (_handler) {
+      handler = _handler
+      return server
+    }
+    const app = Fastify(_opts)
+
+    app.decorate('restart', restart)
+    app.decorate('restarted', !isStart)
+    app.register(opts.app, opts)
+
+    return app
   }
-  const app = Fastify(_opts)
-
-  app.decorate('restart', restart)
-  app.decorate('restarted', !isStart)
-  app.register(opts.app, opts)
-
-  return app
 }
 
 module.exports = start
