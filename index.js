@@ -51,18 +51,11 @@ async function start (opts) {
     const newApp = spinUpFastify(_opts, serverWrapper, restart)
     try {
       await newApp.ready()
-      old.server.removeListener('request', oldHandler)
-      old.server.removeListener('request', oldHandler)
-      newApp.server.on('request', handler)
-      for (const listener of clientErrorListeners) {
-        old.server.removeListener('clientError', listener)
-      }
-      res.app = newApp
-
-      await old.close()
     } catch (err) {
       const listenersNow = newApp.server.listeners('clientError')
       handler = oldHandler
+      // Creating a new Fastify apps adds one clientError listener
+      // Let's remove all the new ones
       for (const listener of listenersNow) {
         if (clientErrorListeners.indexOf(listener) === -1) {
           old.server.removeListener('clientError', listener)
@@ -71,6 +64,17 @@ async function start (opts) {
       await newApp.close()
       throw err
     }
+
+    // Remove the old handler and add the new one
+    // the handler variable was updated in the spinUpFastify function
+    old.server.removeListener('request', oldHandler)
+    newApp.server.on('request', handler)
+    for (const listener of clientErrorListeners) {
+      old.server.removeListener('clientError', listener)
+    }
+    res.app = newApp
+
+    await old.close()
   }
 
   async function stop () {
