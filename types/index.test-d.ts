@@ -1,6 +1,6 @@
 import { FastifyInstance, LightMyRequestResponse } from 'fastify'
 import { expectAssignable, expectType, expectError } from 'tsd'
-import { FastifyRestartableOptions, start } from '../..'
+import { FastifyRestartableOptions, start } from '..'
 
 const myApp = async (app: FastifyInstance, opts: FastifyRestartableOptions) => {
   app.get('/', async () => {
