@@ -4,9 +4,13 @@
   "description": "Restart Fastify without losing a request",
   "main": "index.js",
   "scripts": {
-    "test": "standard | snazzy && tap test/test.js && tsd"
+    "lint": "standard | snazzy",
+    "lint:fix": "standard --fix",
+    "test": "npm run test:unit && npm run test:typescript",
+    "test:typescript": "tsd",
+    "test:unit": "tap"
   },
-  "types": "index.d.ts",
+  "types": "types/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fastify/restartable.git"
@@ -37,7 +41,8 @@
     "@fastify/error": "^3.0.0",
     "fastify": "^4.0.2"
   },
-  "tsd": {
-    "directory": "test/types"
-  }
+  "pre-commit": [
+    "lint",
+    "test"
+  ]
 }

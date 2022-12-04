@@ -108,6 +108,6 @@ async function start (opts) {
   }
 }
 
-module.exports = {
-  start
-}
+module.exports = start
+module.exports.default = start
+module.exports.start = start
