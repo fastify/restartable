@@ -90,6 +90,6 @@ function spinUpFastify (opts, serverWrapper, restart, isStart = false) {
   return app
 }
 
-module.exports = {
-  start
-}
+module.exports = start
+module.exports.default = start
+module.exports.start = start
