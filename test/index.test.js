@@ -3,7 +3,6 @@
 const { join } = require('path')
 const { once } = require('events')
 const { readFile } = require('fs/promises')
-const { setTimeout } = require('timers/promises')
 
 const split = require('split2')
 const { test } = require('tap')
@@ -471,7 +470,7 @@ test('should not restart an application multiple times simultaneously', async (t
       return { hello: 'world' }
     })
 
-    await setTimeout(500)
+    await new Promise((resolve) => setTimeout(resolve, 500))
     return app
   }
 
