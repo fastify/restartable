@@ -4,19 +4,27 @@ const { join } = require('path')
 const { once } = require('events')
 const { readFile } = require('fs/promises')
 
+const t = require('tap')
 const split = require('split2')
-const { test } = require('tap')
 const { request, setGlobalDispatcher, Agent } = require('undici')
 
 const { restartable } = require('..')
 
 setGlobalDispatcher(new Agent({
-  keepAliveTimeout: 10,
-  keepAliveMaxTimeout: 10,
+  keepAliveTimeout: 1,
+  keepAliveMaxTimeout: 1,
   tls: {
     rejectUnauthorized: false
   }
 }))
+
+const COMMON_PORT = 4242
+
+const test = t.test
+t.jobs = 1
+t.afterEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 10))
+})
 
 test('should create and restart fastify app', async (t) => {
   async function createApplication (fastify, opts) {
@@ -35,10 +43,10 @@ test('should create and restart fastify app', async (t) => {
     await app.close()
   })
 
-  const host = await app.listen({ host: '127.0.0.1', port: 5843 })
-  t.equal(host, 'http://127.0.0.1:5843')
+  const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
+  t.equal(host, `http://127.0.0.1:${COMMON_PORT}`)
   t.equal(app.addresses()[0].address, '127.0.0.1')
-  t.equal(app.addresses()[0].port, 5843)
+  t.equal(app.addresses()[0].port, COMMON_PORT)
 
   t.equal(app.restarted, false)
 
@@ -73,10 +81,10 @@ test('should create and restart fastify app twice', async (t) => {
     await app.close()
   })
 
-  const host = await app.listen({ host: '127.0.0.1', port: 5844 })
-  t.equal(host, 'http://127.0.0.1:5844')
+  const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
+  t.equal(host, `http://127.0.0.1:${COMMON_PORT}`)
   t.equal(app.addresses()[0].address, '127.0.0.1')
-  t.equal(app.addresses()[0].port, 5844)
+  t.equal(app.addresses()[0].port, COMMON_PORT)
 
   t.equal(app.restarted, false)
 
@@ -123,10 +131,10 @@ test('should create and restart fastify https app', async (t) => {
     await app.close()
   })
 
-  const host = await app.listen({ host: '127.0.0.1', port: 5844 })
-  t.equal(host, 'http://127.0.0.1:5844')
+  const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
+  t.equal(host, `http://127.0.0.1:${COMMON_PORT}`)
   t.equal(app.addresses()[0].address, '127.0.0.1')
-  t.equal(app.addresses()[0].port, 5844)
+  t.equal(app.addresses()[0].port, COMMON_PORT)
 
   {
     const res = await request(host)
@@ -396,11 +404,7 @@ test('should create and restart fastify app with forceCloseConnections', async (
     await app.close()
   })
 
-  const host = await app.listen({ host: '127.0.0.1', port: 5843 })
-  t.equal(host, 'http://127.0.0.1:5843')
-  t.equal(app.addresses()[0].address, '127.0.0.1')
-  t.equal(app.addresses()[0].port, 5843)
-
+  const host = await app.listen({ host: '127.0.0.1', port: 0 })
   t.equal(app.restarted, false)
 
   {
