@@ -19,7 +19,6 @@ npm i @fastify/restartable
 ## Usage
 
 ```js
-import fastify from 'fastify'
 import { restartable } from './index.js'
 
 async function createApp (fastify, opts) {
@@ -33,7 +32,7 @@ async function createApp (fastify, opts) {
   return app
 }
 
-const app = await restartable(createApp, fastify, { logger: true })
+const app = await restartable(createApp, { logger: true })
 const host = await app.listen({ port: 3000 })
 
 console.log('server listening on', host)
@@ -48,6 +47,7 @@ process.once('SIGINT', () => {
   console.log('Stopping the server')
   app.close()
 })
+
 ```
 
 ## License
