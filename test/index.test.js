@@ -3,6 +3,7 @@
 const { join } = require('path')
 const { once } = require('events')
 const { readFile } = require('fs/promises')
+const { setTimeout } = require('timers/promises')
 
 const split = require('split2')
 const { test } = require('tap')
@@ -455,5 +456,46 @@ test('should not set the server handler before application is ready', async (t) 
   {
     const res = await request(host)
     t.same(await res.body.json(), { version: 2 })
+  }
+})
+
+test('should not restart an application multiple times simultaneously', async (t) => {
+  let startCounter = 0
+
+  async function createApplication (fastify, opts) {
+    startCounter++
+
+    const app = fastify(opts)
+
+    app.get('/', async () => {
+      return { hello: 'world' }
+    })
+
+    await setTimeout(500)
+    return app
+  }
+
+  const app = await restartable(createApplication)
+
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  const host = await app.listen({ port: 0 })
+
+  await Promise.all([
+    app.restart(),
+    app.restart(),
+    app.restart(),
+    app.restart(),
+    app.restart()
+  ])
+
+  t.same(app.restarted, true)
+  t.same(startCounter, 2)
+
+  {
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
   }
 })

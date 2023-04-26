@@ -54,6 +54,15 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     await closeApplication(app)
   }
 
+  let debounce = null
+  // TODO: think about queueing restarts with different options
+  async function debounceRestart (...args) {
+    if (debounce === null) {
+      debounce = restart(...args).finally(() => { debounce = null })
+    }
+    return debounce
+  }
+
   function createApplication (newOpts, isRestarted = true) {
     opts = newOpts
 
@@ -66,7 +75,7 @@ async function restartable (factory, opts, fastify = defaultFastify) {
       ? fastify({ ...newOpts, serverFactory })
       : fastify(newOpts)
 
-    app.decorate('restart', restart)
+    app.decorate('restart', debounceRestart)
     app.decorate('restarted', isRestarted)
 
     return app
