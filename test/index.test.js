@@ -1,12 +1,15 @@
 'use strict'
 
-const { test } = require('tap')
-const { start } = require('..')
-const { request, setGlobalDispatcher, Agent } = require('undici')
-const path = require('path')
-const { readFile } = require('fs').promises
-const split = require('split2')
+const { join } = require('path')
 const { once } = require('events')
+const { readFile } = require('fs/promises')
+
+const split = require('split2')
+const { test } = require('tap')
+const { request, setGlobalDispatcher, Agent } = require('undici')
+
+const { restartable } = require('..')
+const fastify = require('fastify')
 
 setGlobalDispatcher(new Agent({
   keepAliveTimeout: 10,
@@ -16,300 +19,442 @@ setGlobalDispatcher(new Agent({
   }
 }))
 
-test('restart fastify', async ({ pass, teardown, plan, same, equal }) => {
-  plan(11)
+test('should create and restart fastify app', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
 
-  const _opts = {
-    port: 0,
-    app: myApp
-  }
-
-  async function myApp (app, opts) {
-    pass('application loaded')
-    equal(opts, _opts)
     app.get('/', async () => {
       return { hello: 'world' }
     })
+
+    return app
   }
 
-  const server = await start(_opts)
+  const app = await restartable(createApplication, fastify, {})
 
-  same(server.app.restarted, false)
+  t.teardown(async () => {
+    await app.close()
+  })
 
-  const { stop, restart, listen } = server
-  teardown(stop)
+  const host = await app.listen({ host: '127.0.0.1', port: 5843 })
+  t.equal(host, 'http://127.0.0.1:5843')
+  t.equal(app.addresses()[0].address, '127.0.0.1')
+  t.equal(app.addresses()[0].port, 5843)
 
-  const { port, address } = await listen()
-
-  equal(address, '127.0.0.1')
-  equal(port, server.port)
-  equal(address, server.address)
+  t.equal(app.restarted, false)
 
   {
-    const res = await request(`http://127.0.0.1:${port}`)
-    same(await res.body.json(), { hello: 'world' })
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
   }
 
-  await restart()
-  same(server.app.restarted, true)
+  await app.restart()
+  t.same(app.restarted, true)
 
   {
-    const res = await request(`http://127.0.0.1:${port}`)
-    same(await res.body.json(), { hello: 'world' })
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
   }
 })
 
-test('https', async ({ pass, teardown, plan, same, equal }) => {
-  plan(5)
+test('should create and restart fastify app twice', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
 
-  async function myApp (app, opts) {
-    pass('application loaded')
-    app.get('/', async (req, reply) => {
+    app.get('/', async () => {
       return { hello: 'world' }
     })
+
+    return app
   }
 
-  const { listen, stop, restart } = await start({
-    port: 0,
-    protocol: 'https',
-    key: await readFile(path.join(__dirname, 'fixtures', 'key.pem')),
-    cert: await readFile(path.join(__dirname, 'fixtures', 'cert.pem')),
-    app: myApp
+  const app = await restartable(createApplication, fastify, {})
+
+  t.teardown(async () => {
+    await app.close()
   })
-  teardown(stop)
 
-  const { address, port } = await listen()
+  const host = await app.listen({ host: '127.0.0.1', port: 5844 })
+  t.equal(host, 'http://127.0.0.1:5844')
+  t.equal(app.addresses()[0].address, '127.0.0.1')
+  t.equal(app.addresses()[0].port, 5844)
 
-  equal(address, '127.0.0.1')
+  t.equal(app.restarted, false)
 
   {
-    const res = await request(`https://127.0.0.1:${port}`)
-    same(await res.body.json(), { hello: 'world' })
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
   }
 
-  await restart()
+  await app.restart()
+  t.same(app.restarted, true)
 
   {
-    const res = await request(`https://127.0.0.1:${port}`)
-    same(await res.body.json(), { hello: 'world' })
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
+  }
+
+  await app.restart()
+  t.same(app.restarted, true)
+
+  {
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
   }
 })
 
-test('wrong protocol', async function (t) {
-  await t.rejects(() => {
-    return start({
-      port: 0,
-      protocol: 'foobar',
-      app: () => {}
+test('should create and restart fastify https app', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
+
+    app.get('/', async () => {
+      return { hello: 'world' }
     })
-  }, /Unknown Protocol foobar/)
+
+    return app
+  }
+
+  const opts = {
+    key: await readFile(join(__dirname, 'fixtures', 'key.pem')),
+    cert: await readFile(join(__dirname, 'fixtures', 'cert.pem'))
+  }
+  const app = await restartable(createApplication, fastify, opts)
+
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  const host = await app.listen({ host: '127.0.0.1', port: 5844 })
+  t.equal(host, 'http://127.0.0.1:5844')
+  t.equal(app.addresses()[0].address, '127.0.0.1')
+  t.equal(app.addresses()[0].port, 5844)
+
+  {
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
+  }
+
+  await app.restart()
+  t.same(app.restarted, true)
+
+  {
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
+  }
 })
 
-test('restart from a route', async ({ pass, teardown, plan, same, equal }) => {
-  plan(3)
+test('should restart an app from a route handler', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
 
-  async function myApp (app, opts) {
-    pass('application loaded')
-    app.get('/restart', async (req, reply) => {
+    app.get('/restart', async () => {
       await app.restart()
       return { hello: 'world' }
     })
+
+    return app
   }
 
-  const { stop, listen } = await start({
-    port: 0,
-    app: myApp
-  })
-  teardown(stop)
+  const app = await restartable(createApplication, fastify, {})
 
-  const { port } = await listen()
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  const host = await app.listen({ port: 0 })
 
   {
-    const res = await request(`http://127.0.0.1:${port}/restart`)
-    same(await res.body.json(), { hello: 'world' })
+    const res = await request(`${host}/restart`)
+    t.same(await res.body.json(), { hello: 'world' })
+  }
+
+  t.same(app.restarted, true)
+
+  {
+    const res = await request(`${host}/restart`)
+    t.same(await res.body.json(), { hello: 'world' })
   }
 })
 
-test('inject', async ({ pass, teardown, plan, same, equal }) => {
-  plan(3)
+test('should restart an app from inject call', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
 
-  async function myApp (app, opts) {
-    pass('application loaded')
-    app.get('/restart', async (req, reply) => {
+    app.get('/restart', async () => {
       await app.restart()
       return { hello: 'world' }
     })
+
+    return app
   }
 
-  const { stop, inject } = await start({
-    port: 0,
-    app: myApp
-  })
-  teardown(stop)
+  const app = await restartable(createApplication, fastify, {})
+  t.same(app.server.listening, false)
 
   {
-    const res = await inject('/restart')
-    same(res.json(), { hello: 'world' })
+    const res = await app.inject('/restart')
+    t.same(res.json(), { hello: 'world' })
+  }
+
+  t.same(app.restarted, true)
+  t.same(app.server.listening, false)
+
+  {
+    const res = await app.inject('/restart')
+    t.same(res.json(), { hello: 'world' })
   }
 })
 
-test('not listening', async function (t) {
-  const res = await start({
-    app: async () => {}
-  })
+test('logger', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
 
-  t.throws(() => res.address, /not listening/)
-  t.throws(() => res.port, /not listening/)
-})
+    app.get('/', async () => {
+      return { hello: 'world' }
+    })
 
-test('logger', async ({ pass, teardown, equal }) => {
+    return app
+  }
+
   const stream = split(JSON.parse)
-
-  const _opts = {
-    port: 0,
-    app: myApp,
-    logger: {
-      stream
-    }
+  const opts = {
+    logger: { stream }
   }
 
-  async function myApp (app, opts) {
-    pass('application loaded')
-    equal(opts, _opts)
-    app.get('/', async () => {
-      return { hello: 'world' }
-    })
-  }
+  const app = await restartable(createApplication, fastify, opts)
 
-  const server = await start(_opts)
-  const { stop, listen } = server
-  teardown(stop)
+  t.teardown(async () => {
+    await app.close()
+  })
 
-  const { port, address } = await listen()
-
-  {
-    const [{ level, msg, url }] = await once(stream, 'data')
-    equal(level, 30)
-    equal(url, `http://${address}:${port}`)
-    equal(msg, 'server listening')
-  }
-
-  await stop()
+  const host = await app.listen({ port: 0 })
 
   {
     const [{ level, msg }] = await once(stream, 'data')
-    equal(level, 30)
-    equal(msg, 'server stopped')
+    t.equal(level, 30)
+    t.equal(msg, `Server listening at ${host}`)
   }
 })
 
-test('change opts', async ({ teardown, plan, equal }) => {
-  plan(2)
+test('should save new default options after restart', async (t) => {
+  const opts1 = { requestTimeout: 1000 }
+  const opts2 = { requestTimeout: 2000 }
 
-  const _opts = {
-    port: 0,
-    app: myApp
+  let restartCounter = 0
+  const expectedOpts = [opts1, opts2]
+
+  async function createApplication (fastify, opts) {
+    const expected = expectedOpts[restartCounter++]
+    t.same(opts, expected)
+
+    const newOpts = expectedOpts[restartCounter]
+    const app = fastify(newOpts)
+
+    app.get('/', async () => {
+      return { hello: 'world' }
+    })
+
+    return app
   }
 
-  const expected = [undefined, 'bar']
+  const app = await restartable(createApplication, fastify, opts1)
 
-  async function myApp (_, opts) {
-    equal(opts.foo, expected.shift())
-  }
-
-  const server = await start(_opts)
-  const { stop, restart, listen } = server
-  teardown(stop)
-
-  await listen()
-
-  await restart({
-    foo: 'bar',
-    app: myApp
+  t.teardown(async () => {
+    await app.close()
   })
+
+  await app.listen({ port: 0 })
+  await app.restart()
 })
 
-test('no warnings', async ({ pass, teardown, plan, same, equal, fail }) => {
-  plan(12)
+test('should send a restart options', async (t) => {
+  const restartOpts1 = undefined
+  const restartOpts2 = { foo: 'bar' }
 
-  const _opts = {
-    port: 0,
-    app: myApp
+  let restartCounter = 0
+  const expectedOpts = [restartOpts1, restartOpts2]
+
+  async function createApplication (fastify, opts, restartOpts) {
+    const expected = expectedOpts[restartCounter++]
+    t.same(restartOpts, expected)
+
+    const app = fastify(opts)
+
+    app.get('/', async () => {
+      return { hello: 'world' }
+    })
+
+    return app
   }
 
-  async function myApp (app, opts) {
-    pass('application loaded')
+  const app = await restartable(createApplication, fastify, {})
+
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  await app.listen({ port: 0 })
+  await app.restart(restartOpts2)
+})
+
+test('no warnings', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
+
+    app.get('/', async () => {
+      return { hello: 'world' }
+    })
+
+    return app
   }
 
   const onWarning = (warning) => {
-    fail(warning.message)
+    t.fail(warning.message)
   }
 
   process.on('warning', onWarning)
-  teardown(() => {
+
+  t.teardown(async () => {
     process.removeListener('warning', onWarning)
   })
 
-  const server = await start(_opts)
-  const { stop, restart, listen } = server
-  teardown(stop)
+  const app = await restartable(createApplication, fastify)
 
-  await listen()
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  await app.listen({ port: 0 })
 
   for (let i = 0; i < 11; i++) {
-    await restart()
+    await app.restart()
   }
 })
 
-test('restart fastify after a failed start', async ({ pass, teardown, plan, same, equal, rejects }) => {
-  plan(11)
-
-  const _opts = {
-    port: 0,
-    app: myApp
-  }
-
+test('should not restart fastify after a failed start', async (t) => {
   let count = 0
 
-  async function myApp (app, opts) {
-    pass('application loaded')
-    equal(opts, _opts)
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
 
     app.register(async function () {
       if (count++ % 2) {
         throw new Error('kaboom')
       }
     })
+
     app.get('/', async () => {
       return { hello: 'world' }
     })
+
+    return app
   }
 
-  const server = await start(_opts)
+  const app = await restartable(createApplication, fastify, {})
 
-  same(server.app.restarted, false)
+  t.same(app.restarted, false)
 
-  const { stop, restart, listen } = server
-  teardown(stop)
+  t.teardown(async () => {
+    await app.close()
+  })
 
-  const { port } = await listen()
+  const host = await app.listen({ port: 0 })
 
   {
-    const res = await request(`http://127.0.0.1:${port}`)
-    same(await res.body.json(), { hello: 'world' })
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
   }
 
-  await rejects(restart())
+  await t.rejects(app.restart())
 
   {
-    const res = await request(`http://127.0.0.1:${port}`)
-    same(await res.body.json(), { hello: 'world' })
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
   }
 
-  await restart()
+  await app.restart()
+
+  const res = await request(host, { method: 'GET' })
+  t.same(await res.body.json(), { hello: 'world' })
+})
+
+test('should create and restart fastify app with forceCloseConnections', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
+
+    app.get('/', async () => {
+      return { hello: 'world' }
+    })
+
+    return app
+  }
+
+  const app = await restartable(createApplication, fastify, {
+    forceCloseConnections: true
+  })
+
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  const host = await app.listen({ host: '127.0.0.1', port: 5843 })
+  t.equal(host, 'http://127.0.0.1:5843')
+  t.equal(app.addresses()[0].address, '127.0.0.1')
+  t.equal(app.addresses()[0].port, 5843)
+
+  t.equal(app.restarted, false)
 
   {
-    const res = await request(`http://127.0.0.1:${port}`)
-    same(await res.body.json(), { hello: 'world' })
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
+  }
+
+  await app.restart()
+  t.same(app.restarted, true)
+
+  {
+    const res = await request(host)
+    t.same(await res.body.json(), { hello: 'world' })
+  }
+})
+
+test('should not set the server handler before application is ready', async (t) => {
+  let restartCounter = 0
+
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
+
+    if (app.restarted) {
+      const res = await request(host)
+      t.same(await res.body.json(), { version: 1 })
+    }
+
+    app.get('/', async () => {
+      return { version: restartCounter }
+    })
+
+    restartCounter++
+    return app
+  }
+
+  const app = await restartable(createApplication, fastify, {})
+
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  const host = await app.listen({ port: 0 })
+
+  {
+    const res = await request(host)
+    t.same(await res.body.json(), { version: 1 })
+  }
+
+  await app.restart()
+  t.same(app.restarted, true)
+
+  {
+    const res = await request(host)
+    t.same(await res.body.json(), { version: 2 })
   }
 })

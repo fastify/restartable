@@ -19,36 +19,35 @@ npm i @fastify/restartable
 ## Usage
 
 ```js
-import { start } from '@fastify/restartable'
+import fastify from 'fastify'
+import { restartable } from './index.js'
 
-async function myApp (app, opts) {
-  // opts are the options passed to start()
-  console.log('plugin loaded', opts)
+async function createApp (fastify, opts) {
+  const app = fastify(opts)
 
-  app.get('/restart', async (req, reply) => {
+  app.get('/restart', async () => {
     await app.restart()
     return { status: 'ok' }
   })
+
+  return app
 }
 
-const { stop, restart, listen, inject } = await start({
-  protocol: 'http', // or 'https'
-  // key: ...,
-  // cert: ...,
-  // add all other options that you would pass to fastify
-  hostname: '127.0.0.1',
-  port: 3000,
-  app: myApp
+const app = await restartable(createApp, fastify, { logger: true })
+const host = await app.listen({ port: 3000 })
+
+console.log('server listening on', host)
+
+// call restart() if you want to restart
+process.on('SIGUSR1', () => {
+  console.log('Restarting the server')
+  app.restart()
 })
 
-const { address, port } = await listen()
-
-console.log('server listening on', address, port)
-// call restart() if you want to restart
-// call restart(newOpts) if you want to restart Fastify with new options
-// you can't change all the protocol details.
-
-// call inject() to inject a request, see Fastify docs
+process.once('SIGINT', () => {
+  console.log('Stopping the server')
+  app.close()
+})
 ```
 
 ## License

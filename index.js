@@ -1,113 +1,131 @@
 'use strict'
 
-const Fastify = require('fastify')
-const buildServer = require('./lib/server')
+const createMutableProxy = require('./lib/mutable-proxy')
 
-async function start (opts) {
-  const serverWrapper = buildServer(opts)
+const closeCounter = Symbol('closeCounter')
 
-  let listening = false
-  let stopped = false
-  let handler
+async function restartable (factory, fastify, opts) {
+  const app = await factory((opts) => createApplication(opts, false), opts)
+  const server = wrapServer(app.server)
 
-  const res = {
-    app: await (spinUpFastify(opts, serverWrapper, restart, true).ready()),
-    restart,
-    get address () {
-      if (!listening) {
-        throw new Error('Server is not listening')
+  const { proxy, changeTarget } = createMutableProxy(app, {
+    get (target, prop) {
+      if (prop === 'then') {
+        return undefined
       }
-      return serverWrapper.address
-    },
-    get port () {
-      if (!listening) {
-        throw new Error('Server is not listening')
-      }
-      return serverWrapper.port
-    },
-    inject (...args) {
-      return res.app.inject(...args)
-    },
-    async listen () {
-      await serverWrapper.listen()
-      listening = true
-      res.app.log.info({ url: `${opts.protocol || 'http'}://${serverWrapper.address}:${serverWrapper.port}` }, 'server listening')
-      return {
-        address: serverWrapper.address,
-        port: serverWrapper.port
-      }
-    },
-    stop
-  }
+      return target[prop]
+    }
+  })
 
-  res.app.server.on('request', handler)
+  let newHandler = null
 
-  return res
+  async function restart (restartOptions) {
+    const requestListeners = server.listeners('request')
+    const clientErrorListeners = server.listeners('clientError')
 
-  async function restart (_opts = opts) {
-    const old = res.app
-    const oldHandler = handler
-    const clientErrorListeners = old.server.listeners('clientError')
-    const newApp = spinUpFastify(_opts, serverWrapper, restart)
+    let newApp = null
     try {
-      await newApp.ready()
-    } catch (err) {
-      const listenersNow = newApp.server.listeners('clientError')
-      handler = oldHandler
-      // Creating a new Fastify apps adds one clientError listener
-      // Let's remove all the new ones
-      for (const listener of listenersNow) {
-        if (clientErrorListeners.indexOf(listener) === -1) {
-          old.server.removeListener('clientError', listener)
-        }
+      newApp = await factory(createApplication, opts, restartOptions)
+      if (server.listening) {
+        const { port, address } = server.address()
+        await newApp.listen({ port, host: address })
+      } else {
+        await newApp.ready()
       }
-      await newApp.close()
-      throw err
+    } catch (error) {
+      restoreClientErrorListeners(server, clientErrorListeners)
+
+      // In case if fastify.listen() would throw an error
+      // istanbul ignore next
+      if (newApp !== null) {
+        await closeApplication(newApp)
+      }
+      throw error
     }
 
-    // Remove the old handler and add the new one
-    // the handler variable was updated in the spinUpFastify function
-    old.server.removeListener('request', oldHandler)
-    newApp.server.on('request', handler)
-    for (const listener of clientErrorListeners) {
-      old.server.removeListener('clientError', listener)
-    }
-    res.app = newApp
+    server.on('request', newHandler)
 
-    await old.close()
+    removeRequestListeners(server, requestListeners)
+    removeClientErrorListeners(server, clientErrorListeners)
+
+    changeTarget(newApp)
+
+    await closeApplication(app)
   }
 
-  async function stop () {
-    if (stopped) {
-      return
-    }
-    stopped = true
-    const toClose = []
-    if (listening) {
-      toClose.push(serverWrapper.close())
-    }
-    toClose.push(res.app.close())
-    await Promise.all(toClose)
-    res.app.log.info('server stopped')
-  }
+  function createApplication (newOpts, isRestarted = true) {
+    opts = newOpts
 
-  function spinUpFastify (opts, serverWrapper, restart, isStart = false) {
-    const server = serverWrapper.server
-    const _opts = Object.assign({}, opts)
-    _opts.serverFactory = function (_handler) {
-      handler = _handler
+    const serverFactory = (handler) => {
+      newHandler = handler
       return server
     }
-    const app = Fastify(_opts)
+
+    const app = isRestarted
+      ? fastify({ ...newOpts, serverFactory })
+      : fastify(newOpts)
 
     app.decorate('restart', restart)
-    app.decorate('restarted', !isStart)
-    app.register(opts.app, opts)
+    app.decorate('restarted', isRestarted)
 
     return app
   }
+
+  async function closeApplication (app) {
+    server[closeCounter]--
+    try {
+      await app.close()
+    } finally {
+      server[closeCounter]++
+    }
+  }
+
+  return proxy
 }
 
-module.exports = start
-module.exports.default = start
-module.exports.start = start
+function wrapServer (server) {
+  const _listen = server.listen.bind(server)
+
+  server.listen = (...args) => {
+    const cb = args[args.length - 1]
+    return server.listening ? cb() : _listen(...args)
+  }
+
+  const _close = server.close.bind(server)
+  const _closeAllConnections = server.closeAllConnections.bind(server)
+  const _closeIdleConnections = server.closeIdleConnections.bind(server)
+
+  server[closeCounter] = 0
+  server.close = (cb) => server[closeCounter] >= 0 ? _close(cb) : cb()
+  server.closeAllConnections = () => server[closeCounter] >= 0 && _closeAllConnections()
+  server.closeIdleConnections = () => server[closeCounter] >= 0 && _closeIdleConnections()
+
+  return server
+}
+
+function removeRequestListeners (server, listeners) {
+  for (const listener of listeners) {
+    server.removeListener('request', listener)
+  }
+}
+
+function removeClientErrorListeners (server, listeners) {
+  for (const listener of listeners) {
+    server.removeListener('clientError', listener)
+  }
+}
+
+function restoreClientErrorListeners (server, oldListeners) {
+  // Creating a new Fastify apps adds one clientError listener
+  // Let's remove all the new ones
+  const listeners = server.listeners('clientError')
+  for (const listener of listeners) {
+    if (!oldListeners.includes(listener)) {
+      server.removeListener('clientError', listener)
+    }
+  }
+}
+
+module.exports = restartable
+module.exports.default = restartable
+module.exports.restartable = restartable

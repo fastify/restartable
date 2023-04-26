@@ -1,28 +1,29 @@
-import { start } from './index.js'
+import fastify from 'fastify'
+import { restartable } from './index.js'
 
-async function myApp (app, opts) {
-  console.log('plugin loaded')
+async function createApp (fastify, opts) {
+  const app = fastify(opts)
 
-  app.get('/restart', async (req, reply) => {
+  app.get('/restart', async () => {
     await app.restart()
     return { status: 'ok' }
   })
+
+  return app
 }
 
-const { stop, port, restart, address } = await start({
-  port: 3000,
-  app: myApp
-})
+const app = await restartable(createApp, fastify, { logger: true })
+const host = await app.listen({ port: 3000 })
 
-console.log('server listening on', address, port)
+console.log('server listening on', host)
 
 // call restart() if you want to restart
 process.on('SIGUSR1', () => {
   console.log('Restarting the server')
-  restart()
+  app.restart()
 })
 
 process.once('SIGINT', () => {
   console.log('Stopping the server')
-  stop()
+  app.close()
 })

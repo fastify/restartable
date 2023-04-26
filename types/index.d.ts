@@ -1,42 +1,14 @@
-import {
-  FastifyInstance,
-  FastifyServerOptions,
-  InjectOptions,
-  LightMyRequestResponse,
-} from 'fastify'
+import { fastify, FastifyInstance, FastifyServerOptions } from 'fastify'
 
 declare module 'fastify' {
   interface FastifyInstance {
-    restart: () => Promise<void>
+    restart: (restartOpts?: unknown) => Promise<void>,
+    restarted: boolean
   }
 }
 
-type FastifyRestartable = (opts: start.FastifyRestartableOptions) => Promise<{
-  app: FastifyInstance
-  address: string
-  port: number
-  restart: () => Promise<void>
-  listen: () => Promise<{
-    address: string
-    port: number
-  }>
-  stop: () => Promise<void>
-  inject: (opts: InjectOptions | string) => Promise<LightMyRequestResponse>
-}>
+type Fastify = typeof fastify;
 
-declare namespace start {
-  export type FastifyRestartableOptions = FastifyServerOptions & {
-    port: number
-    hostname?: string
-    protocol?: 'http' | 'https'
-    key?: string
-    cert?: string
-    app: (app: FastifyInstance, opts: FastifyRestartableOptions) => Promise<void>
-  }
-  
-  export const start: FastifyRestartable
-  export { start as default }
-}
+export type ApplicationFactory = (fastify: Fastify, opts: FastifyServerOptions, restartOpts?: unknown) => Promise<FastifyInstance>
 
-declare function start(...params: Parameters<FastifyRestartable>): ReturnType<FastifyRestartable>
-export = start
+export declare function restartable(factory: ApplicationFactory, fastify: Fastify, opts: FastifyServerOptions): Promise<FastifyInstance>
