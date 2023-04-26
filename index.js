@@ -1,10 +1,11 @@
 'use strict'
 
+const defaultFastify = require('fastify')
 const createMutableProxy = require('./lib/mutable-proxy')
 
 const closeCounter = Symbol('closeCounter')
 
-async function restartable (factory, fastify, opts) {
+async function restartable (factory, opts, fastify = defaultFastify) {
   const app = await factory((opts) => createApplication(opts, false), opts)
   const server = wrapServer(app.server)
 

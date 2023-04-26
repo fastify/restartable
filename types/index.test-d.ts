@@ -22,7 +22,23 @@ async function createApplication (
 
 expectType<ApplicationFactory>(createApplication)
 
-const app = await restartable(createApplication, fastify, { logger: true })
-expectType<FastifyInstance>(app)
-expectType<boolean>(app.restarted)
-expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
+{
+  const app = await restartable(createApplication)
+  expectType<FastifyInstance>(app)
+  expectType<boolean>(app.restarted)
+  expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
+}
+
+{
+  const app = await restartable(createApplication, { logger: true })
+  expectType<FastifyInstance>(app)
+  expectType<boolean>(app.restarted)
+  expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
+}
+
+{
+  const app = await restartable(createApplication, { logger: true }, fastify)
+  expectType<FastifyInstance>(app)
+  expectType<boolean>(app.restarted)
+  expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
+}

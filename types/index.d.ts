@@ -11,4 +11,4 @@ type Fastify = typeof fastify;
 
 export type ApplicationFactory = (fastify: Fastify, opts: FastifyServerOptions, restartOpts?: unknown) => Promise<FastifyInstance>
 
-export declare function restartable(factory: ApplicationFactory, fastify: Fastify, opts: FastifyServerOptions): Promise<FastifyInstance>
+export declare function restartable(factory: ApplicationFactory, opts?: FastifyServerOptions, fastify?: Fastify): Promise<FastifyInstance>

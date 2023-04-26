@@ -30,13 +30,15 @@
   "devDependencies": {
     "@fastify/pre-commit": "^2.0.2",
     "@types/node": "^18.0.6",
-    "fastify": "^4.15.0",
     "snazzy": "^9.0.0",
     "split2": "^4.1.0",
     "standard": "^17.0.0-2",
     "tap": "^16.0.0",
     "tsd": "^0.28.0",
     "undici": "^5.0.0"
+  },
+  "dependencies": {
+    "fastify": "^4.16.3"
   },
   "pre-commit": [
     "lint",

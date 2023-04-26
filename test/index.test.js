@@ -9,7 +9,6 @@ const { test } = require('tap')
 const { request, setGlobalDispatcher, Agent } = require('undici')
 
 const { restartable } = require('..')
-const fastify = require('fastify')
 
 setGlobalDispatcher(new Agent({
   keepAliveTimeout: 10,
@@ -30,7 +29,7 @@ test('should create and restart fastify app', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication, fastify, {})
+  const app = await restartable(createApplication)
 
   t.teardown(async () => {
     await app.close()
@@ -68,7 +67,7 @@ test('should create and restart fastify app twice', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication, fastify, {})
+  const app = await restartable(createApplication)
 
   t.teardown(async () => {
     await app.close()
@@ -118,7 +117,7 @@ test('should create and restart fastify https app', async (t) => {
     key: await readFile(join(__dirname, 'fixtures', 'key.pem')),
     cert: await readFile(join(__dirname, 'fixtures', 'cert.pem'))
   }
-  const app = await restartable(createApplication, fastify, opts)
+  const app = await restartable(createApplication, opts)
 
   t.teardown(async () => {
     await app.close()
@@ -155,7 +154,7 @@ test('should restart an app from a route handler', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication, fastify, {})
+  const app = await restartable(createApplication)
 
   t.teardown(async () => {
     await app.close()
@@ -188,7 +187,7 @@ test('should restart an app from inject call', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication, fastify, {})
+  const app = await restartable(createApplication)
   t.same(app.server.listening, false)
 
   {
@@ -221,7 +220,7 @@ test('logger', async (t) => {
     logger: { stream }
   }
 
-  const app = await restartable(createApplication, fastify, opts)
+  const app = await restartable(createApplication, opts)
 
   t.teardown(async () => {
     await app.close()
@@ -257,7 +256,7 @@ test('should save new default options after restart', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication, fastify, opts1)
+  const app = await restartable(createApplication, opts1)
 
   t.teardown(async () => {
     await app.close()
@@ -287,7 +286,7 @@ test('should send a restart options', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication, fastify, {})
+  const app = await restartable(createApplication)
 
   t.teardown(async () => {
     await app.close()
@@ -318,7 +317,7 @@ test('no warnings', async (t) => {
     process.removeListener('warning', onWarning)
   })
 
-  const app = await restartable(createApplication, fastify)
+  const app = await restartable(createApplication)
 
   t.teardown(async () => {
     await app.close()
@@ -350,7 +349,7 @@ test('should not restart fastify after a failed start', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication, fastify, {})
+  const app = await restartable(createApplication)
 
   t.same(app.restarted, false)
 
@@ -389,7 +388,7 @@ test('should create and restart fastify app with forceCloseConnections', async (
     return app
   }
 
-  const app = await restartable(createApplication, fastify, {
+  const app = await restartable(createApplication, {
     forceCloseConnections: true
   })
 
@@ -437,7 +436,7 @@ test('should not set the server handler before application is ready', async (t) 
     return app
   }
 
-  const app = await restartable(createApplication, fastify, {})
+  const app = await restartable(createApplication)
 
   t.teardown(async () => {
     await app.close()
