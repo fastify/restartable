@@ -91,14 +91,24 @@ function wrapServer (server) {
     return server.listening ? cb() : _listen(...args)
   }
 
-  const _close = server.close.bind(server)
-  const _closeAllConnections = server.closeAllConnections.bind(server)
-  const _closeIdleConnections = server.closeIdleConnections.bind(server)
-
   server[closeCounter] = 0
+
+  const _close = server.close.bind(server)
   server.close = (cb) => server[closeCounter] >= 0 ? _close(cb) : cb()
-  server.closeAllConnections = () => server[closeCounter] >= 0 && _closeAllConnections()
-  server.closeIdleConnections = () => server[closeCounter] >= 0 && _closeIdleConnections()
+
+  // istanbul ignore next
+  // closeAllConnections was added in Nodejs v18.2.0
+  if (server.closeAllConnections) {
+    const _closeAllConnections = server.closeAllConnections.bind(server)
+    server.closeAllConnections = () => server[closeCounter] >= 0 && _closeAllConnections()
+  }
+
+  // istanbul ignore next
+  // closeIdleConnections was added in Nodejs v18.2.0
+  if (server.closeIdleConnections) {
+    const _closeIdleConnections = server.closeIdleConnections.bind(server)
+    server.closeIdleConnections = () => server[closeCounter] >= 0 && _closeIdleConnections()
+  }
 
   return server
 }
