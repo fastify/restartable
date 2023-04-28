@@ -6,7 +6,7 @@ const createMutableProxy = require('./lib/mutable-proxy')
 const closeCounter = Symbol('closeCounter')
 
 async function restartable (factory, opts, fastify = defaultFastify) {
-  const app = await factory((opts) => createApplication(opts, false), opts)
+  let app = await factory((opts) => createApplication(opts, false), opts)
   const server = wrapServer(app.server)
 
   const { proxy, changeTarget } = createMutableProxy(app, {
@@ -50,8 +50,9 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     removeClientErrorListeners(server, clientErrorListeners)
 
     changeTarget(newApp)
-
     await closeApplication(app)
+
+    app = newApp
   }
 
   let debounce = null

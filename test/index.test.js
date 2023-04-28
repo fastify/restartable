@@ -65,6 +65,8 @@ test('should create and restart fastify app', async (t) => {
 })
 
 test('should create and restart fastify app twice', async (t) => {
+  t.plan(12)
+
   async function createApplication (fastify, opts) {
     const app = fastify(opts)
 
@@ -72,14 +74,18 @@ test('should create and restart fastify app twice', async (t) => {
       return { hello: 'world' }
     })
 
+    let closeCounter = 0
+    app.addHook('onClose', async () => {
+      if (++closeCounter > 1) {
+        t.fail('onClose hook called more than once')
+      }
+      t.pass('onClose hook called')
+    })
+
     return app
   }
 
   const app = await restartable(createApplication)
-
-  t.teardown(async () => {
-    await app.close()
-  })
 
   const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
   t.equal(host, `http://127.0.0.1:${COMMON_PORT}`)
@@ -108,6 +114,8 @@ test('should create and restart fastify app twice', async (t) => {
     const res = await request(host)
     t.same(await res.body.json(), { hello: 'world' })
   }
+
+  await app.close()
 })
 
 test('should create and restart fastify https app', async (t) => {
