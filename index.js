@@ -1,19 +1,11 @@
 'use strict'
 
 const defaultFastify = require('fastify')
-const createMutableProxy = require('./lib/mutable-proxy')
 
 const closeCounter = Symbol('closeCounter')
 
 async function restartable (factory, opts, fastify = defaultFastify) {
-  const { proxy, changeTarget } = createMutableProxy({}, {
-    get (target, prop) {
-      if (prop === 'then') {
-        return undefined
-      }
-      return target[prop]
-    }
-  })
+  const proxy = { then: undefined }
 
   let app = await factory((opts) => createApplication(opts, false), opts)
   const server = wrapServer(app.server)
@@ -49,7 +41,7 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     removeRequestListeners(server, requestListeners)
     removeClientErrorListeners(server, clientErrorListeners)
 
-    changeTarget(newApp)
+    Object.setPrototypeOf(proxy, newApp)
     await closeApplication(app)
 
     app = newApp
@@ -77,7 +69,7 @@ async function restartable (factory, opts, fastify = defaultFastify) {
       : fastify(newOpts)
 
     if (!isRestarted) {
-      changeTarget(app)
+      Object.setPrototypeOf(proxy, app)
     }
 
     app.decorate('restart', debounceRestart)
