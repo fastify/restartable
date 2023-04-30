@@ -510,3 +510,35 @@ test('should not restart an application multiple times simultaneously', async (t
     t.same(await res.body.json(), { hello: 'world' })
   }
 })
+
+test('should contain a persistentRef property', async (t) => {
+  let firstPersistentRef = null
+
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
+
+    if (app.restarted) {
+      t.equal(app.persistentRef, proxy)
+    } else {
+      firstPersistentRef = app.persistentRef
+    }
+
+    return app
+  }
+
+  const proxy = await restartable(createApplication)
+
+  t.equal(firstPersistentRef, proxy)
+
+  t.teardown(async () => {
+    await proxy.close()
+  })
+
+  await proxy.listen({ port: 0 })
+
+  t.equal(proxy.persistentRef, proxy)
+
+  await proxy.restart()
+
+  t.equal(proxy.persistentRef, proxy)
+})

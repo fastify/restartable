@@ -6,10 +6,7 @@ const createMutableProxy = require('./lib/mutable-proxy')
 const closeCounter = Symbol('closeCounter')
 
 async function restartable (factory, opts, fastify = defaultFastify) {
-  let app = await factory((opts) => createApplication(opts, false), opts)
-  const server = wrapServer(app.server)
-
-  const { proxy, changeTarget } = createMutableProxy(app, {
+  const { proxy, changeTarget } = createMutableProxy({}, {
     get (target, prop) {
       if (prop === 'then') {
         return undefined
@@ -17,6 +14,9 @@ async function restartable (factory, opts, fastify = defaultFastify) {
       return target[prop]
     }
   })
+
+  let app = await factory((opts) => createApplication(opts, false), opts)
+  const server = wrapServer(app.server)
 
   let newHandler = null
 
@@ -76,8 +76,13 @@ async function restartable (factory, opts, fastify = defaultFastify) {
       ? fastify({ ...newOpts, serverFactory })
       : fastify(newOpts)
 
+    if (!isRestarted) {
+      changeTarget(app)
+    }
+
     app.decorate('restart', debounceRestart)
     app.decorate('restarted', isRestarted)
+    app.decorate('persistentRef', proxy)
 
     return app
   }
