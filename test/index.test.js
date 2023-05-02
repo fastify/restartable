@@ -542,3 +542,28 @@ test('should contain a persistentRef property', async (t) => {
 
   t.equal(proxy.persistentRef, proxy)
 })
+
+test('server close event should be emitted only when after closing server', async (t) => {
+  t.plan(2)
+
+  async function createApplication (fastify, opts) {
+    return fastify(opts)
+  }
+
+  const app = await restartable(createApplication)
+  await app.listen({ port: 0 })
+
+  t.ok(app.server.listening)
+
+  app.server.on('close', () => {
+    t.pass('server close event emitted')
+  })
+
+  await app.restart()
+  await app.restart()
+  await app.restart()
+  await app.restart()
+  await app.restart()
+
+  await app.close()
+})
