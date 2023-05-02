@@ -80,12 +80,10 @@ async function restartable (factory, opts, fastify = defaultFastify) {
   }
 
   async function closeApplication (app) {
-    server[closeCounter]--
-    try {
-      await app.close()
-    } finally {
-      server[closeCounter]++
+    if (server.listening) {
+      server[closeCounter]--
     }
+    await app.close()
   }
 
   return proxy
@@ -102,7 +100,7 @@ function wrapServer (server) {
   server[closeCounter] = 0
 
   const _close = server.close.bind(server)
-  server.close = (cb) => server[closeCounter] >= 0 ? _close(cb) : cb()
+  server.close = (cb) => ++server[closeCounter] > 0 ? _close(cb) : cb()
 
   // istanbul ignore next
   // closeAllConnections was added in Nodejs v18.2.0

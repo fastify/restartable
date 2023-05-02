@@ -567,3 +567,27 @@ test('server close event should be emitted only when after closing server', asyn
 
   await app.close()
 })
+
+test('should close application during the restart', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
+
+    app.addHook('onClose', async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+    })
+
+    return app
+  }
+
+  const app = await restartable(createApplication)
+  await app.listen({ port: 0 })
+
+  t.ok(app.server.listening)
+
+  app.restart()
+  await new Promise((resolve) => setTimeout(resolve, 500))
+  await app.close()
+
+  t.ok(!app.server.listening)
+})
+
