@@ -24,7 +24,7 @@ const COMMON_PORT = 4242
 const test = t.test
 t.jobs = 1
 t.afterEach(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  await new Promise((resolve) => setTimeout(resolve, 10))
 })
 
 test('should create and restart fastify app', async (t) => {
@@ -38,7 +38,9 @@ test('should create and restart fastify app', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
 
   t.teardown(async () => {
     await app.close()
@@ -86,7 +88,9 @@ test('should create and restart fastify app twice', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
 
   const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
   t.equal(host, `http://127.0.0.1:${COMMON_PORT}`)
@@ -135,6 +139,7 @@ test('should create and restart fastify https app', async (t) => {
       key: await readFile(join(__dirname, 'fixtures', 'key.pem')),
       cert: await readFile(join(__dirname, 'fixtures', 'cert.pem'))
     },
+    keepAliveTimeout: 1,
     maxRequestsPerSocket: 42
   }
   const app = await restartable(createApplication, opts)
@@ -175,7 +180,8 @@ test('should create and restart fastify http2 app', async (t) => {
 
   const opts = {
     http2: true,
-    http2SessionTimeout: 1000
+    http2SessionTimeout: 1000,
+    keepAliveTimeout: 1
   }
   const app = await restartable(createApplication, opts)
 
@@ -238,7 +244,8 @@ test('should create and restart fastify https2 app', async (t) => {
     https: {
       key: await readFile(join(__dirname, 'fixtures', 'key.pem')),
       cert: await readFile(join(__dirname, 'fixtures', 'cert.pem'))
-    }
+    },
+    keepAliveTimeout: 1
   }
   const app = await restartable(createApplication, opts)
 
@@ -267,7 +274,9 @@ test('should restart an app from a route handler', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
 
   t.teardown(async () => {
     await app.close()
@@ -300,7 +309,9 @@ test('should restart an app from inject call', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
   t.same(app.server.listening, false)
 
   {
@@ -330,7 +341,8 @@ test('logger', async (t) => {
 
   const stream = split(JSON.parse)
   const opts = {
-    logger: { stream }
+    logger: { stream },
+    keepAliveTimeout: 1
   }
 
   const app = await restartable(createApplication, opts)
@@ -349,8 +361,14 @@ test('logger', async (t) => {
 })
 
 test('should save new default options after restart', async (t) => {
-  const opts1 = { requestTimeout: 1000 }
-  const opts2 = { requestTimeout: 2000 }
+  const opts1 = {
+    keepAliveTimeout: 1,
+    requestTimeout: 1000
+  }
+  const opts2 = {
+    keepAliveTimeout: 1,
+    requestTimeout: 2000
+  }
 
   let restartCounter = 0
   const expectedOpts = [opts1, opts2]
@@ -399,7 +417,9 @@ test('should send a restart options', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
 
   t.teardown(async () => {
     await app.close()
@@ -462,7 +482,9 @@ test('should not restart fastify after a failed start', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
 
   t.same(app.restarted, false)
 
@@ -502,7 +524,8 @@ test('should create and restart fastify app with forceCloseConnections', async (
   }
 
   const app = await restartable(createApplication, {
-    forceCloseConnections: true
+    forceCloseConnections: true,
+    keepAliveTimeout: 1
   })
 
   t.teardown(async () => {
@@ -545,7 +568,9 @@ test('should not set the server handler before application is ready', async (t) 
     return app
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
 
   t.teardown(async () => {
     await app.close()
@@ -583,7 +608,9 @@ test('should not restart an application multiple times simultaneously', async (t
     return app
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
 
   t.teardown(async () => {
     await app.close()
@@ -623,7 +650,9 @@ test('should contain a persistentRef property', async (t) => {
     return app
   }
 
-  const proxy = await restartable(createApplication)
+  const proxy = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
 
   t.equal(firstPersistentRef, proxy)
 
@@ -647,7 +676,9 @@ test('server close event should be emitted only when after closing server', asyn
     return fastify(opts)
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
   await app.listen({ host: '127.0.0.1', port: 0 })
 
   t.ok(app.server.listening)
@@ -676,7 +707,9 @@ test('should close application during the restart', async (t) => {
     return app
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
   await app.listen({ host: '127.0.0.1', port: 0 })
 
   t.ok(app.server.listening)
@@ -693,7 +726,9 @@ test('should restart an app before listening', async (t) => {
     return fastify(opts)
   }
 
-  const app = await restartable(createApplication)
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
 
   await app.restart()
   t.ok(app.restarted)
