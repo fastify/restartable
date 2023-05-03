@@ -3,6 +3,7 @@
 const { join } = require('path')
 const { once } = require('events')
 const { readFile } = require('fs/promises')
+const http2 = require('http2')
 
 const t = require('tap')
 const split = require('split2')
@@ -23,7 +24,7 @@ const COMMON_PORT = 4242
 const test = t.test
 t.jobs = 1
 t.afterEach(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 10))
+  await new Promise((resolve) => setTimeout(resolve, 50))
 })
 
 test('should create and restart fastify app', async (t) => {
@@ -130,8 +131,11 @@ test('should create and restart fastify https app', async (t) => {
   }
 
   const opts = {
-    key: await readFile(join(__dirname, 'fixtures', 'key.pem')),
-    cert: await readFile(join(__dirname, 'fixtures', 'cert.pem'))
+    https: {
+      key: await readFile(join(__dirname, 'fixtures', 'key.pem')),
+      cert: await readFile(join(__dirname, 'fixtures', 'cert.pem'))
+    },
+    maxRequestsPerSocket: 42
   }
   const app = await restartable(createApplication, opts)
 
@@ -140,7 +144,7 @@ test('should create and restart fastify https app', async (t) => {
   })
 
   const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
-  t.equal(host, `http://127.0.0.1:${COMMON_PORT}`)
+  t.equal(host, `https://127.0.0.1:${COMMON_PORT}`)
   t.equal(app.addresses()[0].address, '127.0.0.1')
   t.equal(app.addresses()[0].port, COMMON_PORT)
 
@@ -156,6 +160,99 @@ test('should create and restart fastify https app', async (t) => {
     const res = await request(host)
     t.same(await res.body.json(), { hello: 'world' })
   }
+})
+
+test('should create and restart fastify http2 app', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
+
+    app.get('/', async () => {
+      return { hello: 'world' }
+    })
+
+    return app
+  }
+
+  const opts = {
+    http2: true,
+    http2SessionTimeout: 1000
+  }
+  const app = await restartable(createApplication, opts)
+
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
+  t.equal(host, `http://127.0.0.1:${COMMON_PORT}`)
+  t.equal(app.addresses()[0].address, '127.0.0.1')
+  t.equal(app.addresses()[0].port, COMMON_PORT)
+
+  const client = http2.connect(host)
+
+  t.teardown(() => {
+    client.close()
+  })
+
+  {
+    const req = client.request({ ':path': '/' })
+    req.setEncoding('utf8')
+
+    let data = ''
+    req.on('data', (chunk) => { data += chunk })
+    await once(req, 'end')
+    req.end()
+
+    t.same(JSON.parse(data), { hello: 'world' })
+  }
+
+  await app.restart()
+  t.same(app.restarted, true)
+
+  {
+    const req = client.request({ ':path': '/' })
+    req.setEncoding('utf8')
+
+    let data = ''
+    req.on('data', (chunk) => { data += chunk })
+    await once(req, 'end')
+    req.end()
+
+    t.same(JSON.parse(data), { hello: 'world' })
+  }
+})
+
+test('should create and restart fastify https2 app', async (t) => {
+  async function createApplication (fastify, opts) {
+    const app = fastify(opts)
+
+    app.get('/', async () => {
+      return { hello: 'world' }
+    })
+
+    return app
+  }
+
+  const opts = {
+    http2: true,
+    https: {
+      key: await readFile(join(__dirname, 'fixtures', 'key.pem')),
+      cert: await readFile(join(__dirname, 'fixtures', 'cert.pem'))
+    }
+  }
+  const app = await restartable(createApplication, opts)
+
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
+  t.equal(host, `https://127.0.0.1:${COMMON_PORT}`)
+  t.equal(app.addresses()[0].address, '127.0.0.1')
+  t.equal(app.addresses()[0].port, COMMON_PORT)
+
+  await app.restart()
+  t.same(app.restarted, true)
 })
 
 test('should restart an app from a route handler', async (t) => {
@@ -176,7 +273,7 @@ test('should restart an app from a route handler', async (t) => {
     await app.close()
   })
 
-  const host = await app.listen({ port: 0 })
+  const host = await app.listen({ host: '127.0.0.1', port: 0 })
 
   {
     const res = await request(`${host}/restart`)
@@ -242,7 +339,7 @@ test('logger', async (t) => {
     await app.close()
   })
 
-  const host = await app.listen({ port: 0 })
+  const host = await app.listen({ host: '127.0.0.1', port: 0 })
 
   {
     const [{ level, msg }] = await once(stream, 'data')
@@ -278,7 +375,7 @@ test('should save new default options after restart', async (t) => {
     await app.close()
   })
 
-  await app.listen({ port: 0 })
+  await app.listen({ host: '127.0.0.1', port: 0 })
   await app.restart()
 })
 
@@ -308,7 +405,7 @@ test('should send a restart options', async (t) => {
     await app.close()
   })
 
-  await app.listen({ port: 0 })
+  await app.listen({ host: '127.0.0.1', port: 0 })
   await app.restart(restartOpts2)
 })
 
@@ -339,7 +436,7 @@ test('no warnings', async (t) => {
     await app.close()
   })
 
-  await app.listen({ port: 0 })
+  await app.listen({ host: '127.0.0.1', port: 0 })
 
   for (let i = 0; i < 11; i++) {
     await app.restart()
@@ -373,7 +470,7 @@ test('should not restart fastify after a failed start', async (t) => {
     await app.close()
   })
 
-  const host = await app.listen({ port: 0 })
+  const host = await app.listen({ host: '127.0.0.1', port: 0 })
 
   {
     const res = await request(host)
@@ -454,7 +551,7 @@ test('should not set the server handler before application is ready', async (t) 
     await app.close()
   })
 
-  const host = await app.listen({ port: 0 })
+  const host = await app.listen({ host: '127.0.0.1', port: 0 })
 
   {
     const res = await request(host)
@@ -492,7 +589,7 @@ test('should not restart an application multiple times simultaneously', async (t
     await app.close()
   })
 
-  const host = await app.listen({ port: 0 })
+  const host = await app.listen({ host: '127.0.0.1', port: 0 })
 
   await Promise.all([
     app.restart(),
@@ -534,7 +631,7 @@ test('should contain a persistentRef property', async (t) => {
     await proxy.close()
   })
 
-  await proxy.listen({ port: 0 })
+  await proxy.listen({ host: '127.0.0.1', port: 0 })
 
   t.equal(proxy.persistentRef, proxy)
 
@@ -551,7 +648,7 @@ test('server close event should be emitted only when after closing server', asyn
   }
 
   const app = await restartable(createApplication)
-  await app.listen({ port: 0 })
+  await app.listen({ host: '127.0.0.1', port: 0 })
 
   t.ok(app.server.listening)
 
@@ -580,7 +677,7 @@ test('should close application during the restart', async (t) => {
   }
 
   const app = await restartable(createApplication)
-  await app.listen({ port: 0 })
+  await app.listen({ host: '127.0.0.1', port: 0 })
 
   t.ok(app.server.listening)
 
@@ -591,3 +688,19 @@ test('should close application during the restart', async (t) => {
   t.ok(!app.server.listening)
 })
 
+test('should restart an app before listening', async (t) => {
+  async function createApplication (fastify, opts) {
+    return fastify(opts)
+  }
+
+  const app = await restartable(createApplication)
+
+  await app.restart()
+  t.ok(app.restarted)
+
+  await app.listen({ host: '127.0.0.1', port: 0 })
+  t.ok(app.server.listening)
+
+  await app.close()
+  t.ok(!app.server.listening)
+})

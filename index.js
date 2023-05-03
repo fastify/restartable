@@ -1,6 +1,7 @@
 'use strict'
 
 const defaultFastify = require('fastify')
+const getServerInstance = require('./lib/server')
 
 const closeCounter = Symbol('closeCounter')
 
@@ -59,14 +60,26 @@ async function restartable (factory, opts, fastify = defaultFastify) {
   function createApplication (newOpts, isRestarted = true) {
     opts = newOpts
 
-    const serverFactory = (handler) => {
-      newHandler = handler
-      return server
+    let createServerCounter = 0
+    function serverFactory (handler, options) {
+      // this cause an uncaughtException because of the bug in Fastify
+      // see: https://github.com/fastify/fastify/issues/4730
+      // istanbul ignore next
+      if (++createServerCounter > 1) {
+        throw new Error(
+          'Cannot create multiple server bindings for a restartable application. ' +
+          'Please specify an IP address as a host parameter to the fastify.listen()'
+        )
+      }
+
+      if (isRestarted) {
+        newHandler = handler
+        return server
+      }
+      return getServerInstance(options, handler)
     }
 
-    const app = isRestarted
-      ? fastify({ ...newOpts, serverFactory })
-      : fastify(newOpts)
+    const app = fastify({ ...newOpts, serverFactory })
 
     if (!isRestarted) {
       Object.setPrototypeOf(proxy, app)
