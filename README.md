@@ -19,7 +19,7 @@ npm i @fastify/restartable
 ## Usage
 
 ```js
-import { restartable } from './index.js'
+import { restartable } from '@fastify/restartable'
 
 async function createApp (fastify, opts) {
   const app = fastify(opts)
