@@ -3,7 +3,7 @@
 const defaultFastify = require('fastify')
 const getServerInstance = require('./lib/server')
 
-const closeCounter = Symbol('closeCounter')
+const closingServer = Symbol('closingServer')
 
 async function restartable (factory, opts, fastify = defaultFastify) {
   const proxy = { then: undefined }
@@ -57,6 +57,7 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     return debounce
   }
 
+  let serverCloseCounter = 0
   let closingRestartable = false
 
   function createApplication (newOpts, isRestarted = true) {
@@ -99,10 +100,9 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     })
 
     app.addHook('preClose', async () => {
-      server[closeCounter]++
-
-      if (server[closeCounter] > 0) {
+      if (++serverCloseCounter > 0) {
         closingRestartable = true
+        server[closingServer] = true
       }
     })
 
@@ -110,7 +110,7 @@ async function restartable (factory, opts, fastify = defaultFastify) {
   }
 
   async function closeApplication (app) {
-    server[closeCounter]--
+    serverCloseCounter--
     await app.close()
   }
 
@@ -125,23 +125,23 @@ function wrapServer (server) {
     return server.listening ? cb() : _listen(...args)
   }
 
-  server[closeCounter] = 0
+  server[closingServer] = false
 
   const _close = server.close.bind(server)
-  server.close = (cb) => server[closeCounter] > 0 ? _close(cb) : cb()
+  server.close = (cb) => server[closingServer] ? _close(cb) : cb()
 
   // istanbul ignore next
   // closeAllConnections was added in Nodejs v18.2.0
   if (server.closeAllConnections) {
     const _closeAllConnections = server.closeAllConnections.bind(server)
-    server.closeAllConnections = () => server[closeCounter] >= 0 && _closeAllConnections()
+    server.closeAllConnections = () => server[closingServer] && _closeAllConnections()
   }
 
   // istanbul ignore next
   // closeIdleConnections was added in Nodejs v18.2.0
   if (server.closeIdleConnections) {
     const _closeIdleConnections = server.closeIdleConnections.bind(server)
-    server.closeIdleConnections = () => server[closeCounter] >= 0 && _closeIdleConnections()
+    server.closeIdleConnections = () => server[closingServer] && _closeIdleConnections()
   }
 
   return server
