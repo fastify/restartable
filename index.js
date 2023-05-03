@@ -86,8 +86,12 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     }
 
     app.decorate('restart', debounceRestart)
-    app.decorate('restarted', isRestarted)
-    app.decorate('persistentRef', proxy)
+    app.decorate('restarted', {
+      getter: () => isRestarted
+    })
+    app.decorate('persistentRef', {
+      getter: () => proxy
+    })
 
     return app
   }
