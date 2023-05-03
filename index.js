@@ -57,6 +57,8 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     return debounce
   }
 
+  let closingRestartable = false
+
   function createApplication (newOpts, isRestarted = true) {
     opts = newOpts
 
@@ -92,9 +94,16 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     app.decorate('persistentRef', {
       getter: () => proxy
     })
+    app.decorate('closingRestartable', {
+      getter: () => closingRestartable
+    })
 
     app.addHook('preClose', async () => {
       server[closeCounter]++
+
+      if (server[closeCounter] > 0) {
+        closingRestartable = true
+      }
     })
 
     return app

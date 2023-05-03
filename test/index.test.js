@@ -68,7 +68,9 @@ test('should create and restart fastify app', async (t) => {
 })
 
 test('should create and restart fastify app twice', async (t) => {
-  t.plan(12)
+  t.plan(15)
+
+  let closingRestartable = false
 
   async function createApplication (fastify, opts) {
     const app = fastify(opts)
@@ -82,6 +84,7 @@ test('should create and restart fastify app twice', async (t) => {
       if (++closeCounter > 1) {
         t.fail('onClose hook called more than once')
       }
+      t.equal(app.closingRestartable, closingRestartable)
       t.pass('onClose hook called')
     })
 
@@ -120,6 +123,7 @@ test('should create and restart fastify app twice', async (t) => {
     t.same(await res.body.json(), { hello: 'world' })
   }
 
+  closingRestartable = true
   await app.close()
 })
 
