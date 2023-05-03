@@ -24,7 +24,7 @@ const COMMON_PORT = 4242
 const test = t.test
 t.jobs = 1
 t.afterEach(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 50))
+  await new Promise((resolve) => setTimeout(resolve, 500))
 })
 
 test('should create and restart fastify app', async (t) => {
