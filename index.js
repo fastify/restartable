@@ -1,113 +1,175 @@
 'use strict'
 
-const Fastify = require('fastify')
-const buildServer = require('./lib/server')
+const defaultFastify = require('fastify')
+const getServerInstance = require('./lib/server')
 
-async function start (opts) {
-  const serverWrapper = buildServer(opts)
+const closingServer = Symbol('closingServer')
 
-  let listening = false
-  let stopped = false
-  let handler
+async function restartable (factory, opts, fastify = defaultFastify) {
+  const proxy = { then: undefined }
 
-  const res = {
-    app: await (spinUpFastify(opts, serverWrapper, restart, true).ready()),
-    restart,
-    get address () {
-      if (!listening) {
-        throw new Error('Server is not listening')
-      }
-      return serverWrapper.address
-    },
-    get port () {
-      if (!listening) {
-        throw new Error('Server is not listening')
-      }
-      return serverWrapper.port
-    },
-    inject (...args) {
-      return res.app.inject(...args)
-    },
-    async listen () {
-      await serverWrapper.listen()
-      listening = true
-      res.app.log.info({ url: `${opts.protocol || 'http'}://${serverWrapper.address}:${serverWrapper.port}` }, 'server listening')
-      return {
-        address: serverWrapper.address,
-        port: serverWrapper.port
-      }
-    },
-    stop
-  }
+  let app = await factory((opts) => createApplication(opts, false), opts)
+  const server = wrapServer(app.server)
 
-  res.app.server.on('request', handler)
+  let newHandler = null
 
-  return res
+  async function restart (restartOptions) {
+    const requestListeners = server.listeners('request')
+    const clientErrorListeners = server.listeners('clientError')
 
-  async function restart (_opts = opts) {
-    const old = res.app
-    const oldHandler = handler
-    const clientErrorListeners = old.server.listeners('clientError')
-    const newApp = spinUpFastify(_opts, serverWrapper, restart)
+    let newApp = null
     try {
-      await newApp.ready()
-    } catch (err) {
-      const listenersNow = newApp.server.listeners('clientError')
-      handler = oldHandler
-      // Creating a new Fastify apps adds one clientError listener
-      // Let's remove all the new ones
-      for (const listener of listenersNow) {
-        if (clientErrorListeners.indexOf(listener) === -1) {
-          old.server.removeListener('clientError', listener)
-        }
+      newApp = await factory(createApplication, opts, restartOptions)
+      if (server.listening) {
+        const { port, address } = server.address()
+        await newApp.listen({ port, host: address })
+      } else {
+        await newApp.ready()
       }
-      await newApp.close()
-      throw err
+    } catch (error) {
+      restoreClientErrorListeners(server, clientErrorListeners)
+
+      // In case if fastify.listen() would throw an error
+      // istanbul ignore next
+      if (newApp !== null) {
+        await closeApplication(newApp)
+      }
+      throw error
     }
 
-    // Remove the old handler and add the new one
-    // the handler variable was updated in the spinUpFastify function
-    old.server.removeListener('request', oldHandler)
-    newApp.server.on('request', handler)
-    for (const listener of clientErrorListeners) {
-      old.server.removeListener('clientError', listener)
-    }
-    res.app = newApp
+    server.on('request', newHandler)
 
-    await old.close()
+    removeRequestListeners(server, requestListeners)
+    removeClientErrorListeners(server, clientErrorListeners)
+
+    Object.setPrototypeOf(proxy, newApp)
+    await closeApplication(app)
+
+    app = newApp
   }
 
-  async function stop () {
-    if (stopped) {
-      return
+  let debounce = null
+  // TODO: think about queueing restarts with different options
+  async function debounceRestart (...args) {
+    if (debounce === null) {
+      debounce = restart(...args).finally(() => { debounce = null })
     }
-    stopped = true
-    const toClose = []
-    if (listening) {
-      toClose.push(serverWrapper.close())
-    }
-    toClose.push(res.app.close())
-    await Promise.all(toClose)
-    res.app.log.info('server stopped')
+    return debounce
   }
 
-  function spinUpFastify (opts, serverWrapper, restart, isStart = false) {
-    const server = serverWrapper.server
-    const _opts = Object.assign({}, opts)
-    _opts.serverFactory = function (_handler) {
-      handler = _handler
-      return server
-    }
-    const app = Fastify(_opts)
+  let serverCloseCounter = 0
+  let closingRestartable = false
 
-    app.decorate('restart', restart)
-    app.decorate('restarted', !isStart)
-    app.register(opts.app, opts)
+  function createApplication (newOpts, isRestarted = true) {
+    opts = newOpts
+
+    let createServerCounter = 0
+    function serverFactory (handler, options) {
+      // this cause an uncaughtException because of the bug in Fastify
+      // see: https://github.com/fastify/fastify/issues/4730
+      // istanbul ignore next
+      if (++createServerCounter > 1) {
+        throw new Error(
+          'Cannot create multiple server bindings for a restartable application. ' +
+          'Please specify an IP address as a host parameter to the fastify.listen()'
+        )
+      }
+
+      if (isRestarted) {
+        newHandler = handler
+        return server
+      }
+      return getServerInstance(options, handler)
+    }
+
+    const app = fastify({ ...newOpts, serverFactory })
+
+    if (!isRestarted) {
+      Object.setPrototypeOf(proxy, app)
+    }
+
+    app.decorate('restart', debounceRestart)
+    app.decorate('restarted', {
+      getter: () => isRestarted
+    })
+    app.decorate('persistentRef', {
+      getter: () => proxy
+    })
+    app.decorate('closingRestartable', {
+      getter: () => closingRestartable
+    })
+
+    app.addHook('preClose', async () => {
+      if (++serverCloseCounter > 0) {
+        closingRestartable = true
+        server[closingServer] = true
+      }
+    })
 
     return app
   }
+
+  async function closeApplication (app) {
+    serverCloseCounter--
+    await app.close()
+  }
+
+  return proxy
 }
 
-module.exports = start
-module.exports.default = start
-module.exports.start = start
+function wrapServer (server) {
+  const _listen = server.listen.bind(server)
+
+  server.listen = (...args) => {
+    const cb = args[args.length - 1]
+    return server.listening ? cb() : _listen(...args)
+  }
+
+  server[closingServer] = false
+
+  const _close = server.close.bind(server)
+  server.close = (cb) => server[closingServer] ? _close(cb) : cb()
+
+  // istanbul ignore next
+  // closeAllConnections was added in Nodejs v18.2.0
+  if (server.closeAllConnections) {
+    const _closeAllConnections = server.closeAllConnections.bind(server)
+    server.closeAllConnections = () => server[closingServer] && _closeAllConnections()
+  }
+
+  // istanbul ignore next
+  // closeIdleConnections was added in Nodejs v18.2.0
+  if (server.closeIdleConnections) {
+    const _closeIdleConnections = server.closeIdleConnections.bind(server)
+    server.closeIdleConnections = () => server[closingServer] && _closeIdleConnections()
+  }
+
+  return server
+}
+
+function removeRequestListeners (server, listeners) {
+  for (const listener of listeners) {
+    server.removeListener('request', listener)
+  }
+}
+
+function removeClientErrorListeners (server, listeners) {
+  for (const listener of listeners) {
+    server.removeListener('clientError', listener)
+  }
+}
+
+function restoreClientErrorListeners (server, oldListeners) {
+  // Creating a new Fastify apps adds one clientError listener
+  // Let's remove all the new ones
+  const listeners = server.listeners('clientError')
+  for (const listener of listeners) {
+    if (!oldListeners.includes(listener)) {
+      server.removeListener('clientError', listener)
+    }
+  }
+}
+
+module.exports = restartable
+module.exports.default = restartable
+module.exports.restartable = restartable

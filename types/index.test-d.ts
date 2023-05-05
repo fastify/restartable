@@ -1,40 +1,44 @@
-import { FastifyInstance, LightMyRequestResponse } from 'fastify'
-import { expectAssignable, expectType, expectError } from 'tsd'
-import { FastifyRestartableOptions, start } from '..'
+import { fastify, FastifyInstance, FastifyServerOptions } from 'fastify'
+import { expectAssignable, expectType } from 'tsd'
+import { restartable, ApplicationFactory } from './index'
 
-const myApp = async (app: FastifyInstance, opts: FastifyRestartableOptions) => {
-  app.get('/', async () => {
-    expectType<() => Promise<void>>(app.restart)
-    return { hello: 'world' }
-  })
+type Fastify = typeof fastify
+
+async function createApplication (
+  fastify: Fastify,
+  opts: FastifyServerOptions,
+  restartOpts?: unknown
+): Promise<FastifyInstance> {
+  const app = fastify(opts)
+
+  expectAssignable<FastifyInstance>(app)
+  expectAssignable<unknown>(restartOpts)
+
+  expectType<boolean>(app.restarted)
+  expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
+
+  return app
 }
 
-const _badProtocol = {
-  port: 4001,
-  app: myApp,
-  protocol: 'ftp',
-}
-expectError(start(_badProtocol))
+expectType<ApplicationFactory>(createApplication)
 
-const _missingAppOpt = {
-  port: 4001,
-}
-expectError(start(_missingAppOpt))
-
-const _opts = {
-  port: 4001,
-  app: myApp,
-  ignoreTrailingSlash: true,
+{
+  const app = await restartable(createApplication)
+  expectType<FastifyInstance>(app)
+  expectType<boolean>(app.restarted)
+  expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
 }
 
-expectAssignable<FastifyRestartableOptions>(_opts)
+{
+  const app = await restartable(createApplication, { logger: true })
+  expectType<FastifyInstance>(app)
+  expectType<boolean>(app.restarted)
+  expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
+}
 
-const restartable = await start(_opts)
-
-expectType<string>(restartable.address)
-expectType<number>(restartable.port)
-expectType<FastifyInstance>(restartable.app)
-expectType<Promise<void>>(restartable.restart())
-expectType<Promise<LightMyRequestResponse>>(restartable.inject('/'))
-expectType<Promise<{ address: string; port: number }>>(restartable.listen())
-expectType<Promise<void>>(restartable.stop())
+{
+  const app = await restartable(createApplication, { logger: true }, fastify)
+  expectType<FastifyInstance>(app)
+  expectType<boolean>(app.restarted)
+  expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
+}
