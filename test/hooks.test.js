@@ -39,6 +39,37 @@ test('should trigger preRestartHook', async (t) => {
   await app.restart(expectedRestartOptions)
 })
 
+test('should not fail preRestartHook throw an error', async (t) => {
+  t.plan(3)
+
+  async function createApplication (fastify, opts) {
+    return fastify(opts)
+  }
+
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
+
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  const expectedRestartOptions = { foo: 'bar' }
+
+  app.addPreRestartHook(async () => {
+    throw new Error('kaboom')
+  })
+
+  app.addPreRestartHook(async (app, restartOptions) => {
+    t.equal(app.restarted, false)
+    t.same(restartOptions, expectedRestartOptions)
+  })
+
+  await app.restart(expectedRestartOptions)
+
+  t.equal(app.restarted, true)
+})
+
 test('should throw if preRestartHook is not a function', async (t) => {
   t.plan(1)
 
@@ -87,6 +118,37 @@ test('should trigger onRestartHook', async (t) => {
   })
 
   await app.restart(expectedRestartOptions)
+})
+
+test('should not fail onRestartHook throw an error', async (t) => {
+  t.plan(3)
+
+  async function createApplication (fastify, opts) {
+    return fastify(opts)
+  }
+
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
+
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  const expectedRestartOptions = { foo: 'bar' }
+
+  app.addOnRestartHook(async () => {
+    throw new Error('kaboom')
+  })
+
+  app.addOnRestartHook(async (app, restartOptions) => {
+    t.equal(app.restarted, true)
+    t.same(restartOptions, expectedRestartOptions)
+  })
+
+  await app.restart(expectedRestartOptions)
+
+  t.equal(app.restarted, true)
 })
 
 test('should throw if onRestartHook is not a function', async (t) => {

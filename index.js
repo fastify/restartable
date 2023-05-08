@@ -20,9 +20,11 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     const requestListeners = server.listeners('request')
     const clientErrorListeners = server.listeners('clientError')
 
-    await Promise.allSettled(
-      preRestartHooks.map(hook => hook(app, restartOptions))
-    )
+    for (const preRestartHook of preRestartHooks) {
+      await preRestartHook(app, restartOptions).catch((error) => {
+        app.log.error(error, 'preRestartHook error')
+      })
+    }
 
     let newApp = null
     try {
@@ -54,9 +56,11 @@ async function restartable (factory, opts, fastify = defaultFastify) {
 
     app = newApp
 
-    Promise.allSettled(
-      onRestartHooks.map(hook => hook(newApp, restartOptions))
-    )
+    for (const onRestartHook of onRestartHooks) {
+      await onRestartHook(newApp, restartOptions).catch((error) => {
+        newApp.log.error(error, 'onRestartHook error')
+      })
+    }
   }
 
   let debounce = null
