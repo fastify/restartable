@@ -1,8 +1,12 @@
 import { fastify, FastifyInstance, FastifyServerOptions } from 'fastify'
 
+export type RestartHook = (instance: FastifyInstance, restartOpts?: unknown) => Promise<unknown>
+
 declare module 'fastify' {
   interface FastifyInstance {
     restart: (restartOpts?: unknown) => Promise<void>,
+    addPreRestartHook: (fn: RestartHook) => void,
+    addOnRestartHook: (fn: RestartHook) => void,
     restarted: boolean
   }
 }
