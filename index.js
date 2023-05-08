@@ -13,9 +13,16 @@ async function restartable (factory, opts, fastify = defaultFastify) {
 
   let newHandler = null
 
+  const preRestartHooks = []
+  const onRestartHooks = []
+
   async function restart (restartOptions) {
     const requestListeners = server.listeners('request')
     const clientErrorListeners = server.listeners('clientError')
+
+    await Promise.allSettled(
+      preRestartHooks.map(hook => hook(app, restartOptions))
+    )
 
     let newApp = null
     try {
@@ -46,6 +53,8 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     await closeApplication(app)
 
     app = newApp
+
+    onRestartHooks.forEach(hook => hook(app, restartOptions))
   }
 
   let debounce = null
@@ -89,6 +98,21 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     }
 
     app.decorate('restart', debounceRestart)
+
+    app.decorate('addPreRestartHook', (hook) => {
+      if (typeof hook !== 'function') {
+        throw new TypeError('The hook must be a function')
+      }
+      preRestartHooks.push(hook)
+    })
+
+    app.decorate('addOnRestartHook', (hook) => {
+      if (typeof hook !== 'function') {
+        throw new TypeError('The hook must be a function')
+      }
+      onRestartHooks.push(hook)
+    })
+
     app.decorate('restarted', {
       getter: () => isRestarted
     })

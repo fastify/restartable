@@ -42,3 +42,9 @@ expectType<ApplicationFactory>(createApplication)
   expectType<boolean>(app.restarted)
   expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
 }
+
+{
+  const app = await restartable(createApplication, { logger: true }, fastify)
+  app.addPreRestartHook(async (instance: FastifyInstance, restartOpts: unknown) => {})
+  app.addOnRestartHook(async (instance: FastifyInstance, restartOpts: unknown) => {})
+}
