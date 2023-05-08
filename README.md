@@ -50,6 +50,44 @@ process.once('SIGINT', () => {
 
 ```
 
+## Hooks
+
+- `preRestart` - called before the creating a new app instance and closing an
+existing one. The hook is called with the current app instance as an argument.
+Use it to close any resources that you don't want to be shared between the
+app instances.
+
+- `onRestart` - called after the new app instance is created and the old one
+is closed. The hook is called with the new app instance as an argument.
+
+**Example**:
+
+```js
+  async function createApplication (fastify, opts) {
+    console.log('creating new app instance')
+    return fastify(opts)
+  }
+  const app = await restartable(createApplication)
+
+  app.addPreRestartHook(async (app) => {
+    console.log('preRestart hook called')
+  })
+  
+  app.addOnRestartHook(async (app) => {
+    console.log('onRestart hook called')
+  })
+
+  await app.restart()
+```
+
+**Output**:
+
+```bash
+preRestart hook called
+creating new app instance
+onRestart hook called
+```
+
 ## License
 
 MIT

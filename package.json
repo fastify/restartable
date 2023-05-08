@@ -29,7 +29,7 @@
   "homepage": "https://github.com/fastify/restartable#readme",
   "devDependencies": {
     "@fastify/pre-commit": "^2.0.2",
-    "@types/node": "^18.0.6",
+    "@types/node": "^20.1.0",
     "snazzy": "^9.0.0",
     "split2": "^4.1.0",
     "standard": "^17.0.0-2",
