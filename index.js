@@ -54,7 +54,9 @@ async function restartable (factory, opts, fastify = defaultFastify) {
 
     app = newApp
 
-    onRestartHooks.forEach(hook => hook(app, restartOptions))
+    Promise.allSettled(
+      onRestartHooks.map(hook => hook(newApp, restartOptions))
+    )
   }
 
   let debounce = null
