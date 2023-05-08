@@ -20,11 +20,7 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     const requestListeners = server.listeners('request')
     const clientErrorListeners = server.listeners('clientError')
 
-    for (const preRestartHook of preRestartHooks) {
-      await preRestartHook(app, restartOptions).catch((error) => {
-        app.log.error(error, 'preRestartHook error')
-      })
-    }
+    await executeHooks(preRestartHooks, app, restartOptions)
 
     let newApp = null
     try {
@@ -56,11 +52,7 @@ async function restartable (factory, opts, fastify = defaultFastify) {
 
     app = newApp
 
-    for (const onRestartHook of onRestartHooks) {
-      await onRestartHook(newApp, restartOptions).catch((error) => {
-        newApp.log.error(error, 'onRestartHook error')
-      })
-    }
+    executeHooks(onRestartHooks, newApp, restartOptions)
   }
 
   let debounce = null
@@ -197,6 +189,12 @@ function restoreClientErrorListeners (server, oldListeners) {
     if (!oldListeners.includes(listener)) {
       server.removeListener('clientError', listener)
     }
+  }
+}
+
+async function executeHooks (hooks, app, opts) {
+  for (const hook of hooks) {
+    await hook(app, opts).catch((error) => app.log.error(error))
   }
 }
 
