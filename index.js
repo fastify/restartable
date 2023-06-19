@@ -9,6 +9,8 @@ async function restartable (factory, opts, fastify = defaultFastify) {
   const proxy = { then: undefined }
 
   let app = await factory((opts) => createApplication(opts, false), opts)
+  Object.setPrototypeOf(proxy, app)
+
   const server = wrapServer(app.server)
 
   let newHandler = null
@@ -90,10 +92,6 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     }
 
     const app = fastify({ ...newOpts, serverFactory })
-
-    if (!isRestarted) {
-      Object.setPrototypeOf(proxy, app)
-    }
 
     app.decorate('restart', debounceRestart)
 
