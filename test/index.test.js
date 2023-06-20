@@ -4,6 +4,7 @@ const { join } = require('path')
 const { once } = require('events')
 const { readFile } = require('fs/promises')
 const http2 = require('http2')
+const fastify = require('fastify')
 
 const t = require('tap')
 const split = require('split2')
@@ -742,4 +743,20 @@ test('should restart an app before listening', async (t) => {
 
   await app.close()
   t.ok(!app.server.listening)
+})
+
+test('should always proxy to the factory wrapped version of app', async (t) => {
+  async function userProvidedFactory () {
+    const app = fastify()
+
+    app.userProvided = true
+
+    return app
+  }
+
+  const proxy = await restartable(userProvidedFactory, {
+    keepAliveTimeout: 1
+  })
+
+  t.same(proxy.userProvided, true)
 })
