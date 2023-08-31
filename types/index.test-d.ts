@@ -26,6 +26,7 @@ expectType<ApplicationFactory>(createApplication)
   const app = await restartable(createApplication)
   expectType<FastifyInstance>(app)
   expectType<boolean>(app.restarted)
+  expectType<boolean>(app.closingRestartable)
   expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
 }
 
@@ -33,6 +34,7 @@ expectType<ApplicationFactory>(createApplication)
   const app = await restartable(createApplication, { logger: true })
   expectType<FastifyInstance>(app)
   expectType<boolean>(app.restarted)
+  expectType<boolean>(app.closingRestartable)
   expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
 }
 
@@ -40,6 +42,7 @@ expectType<ApplicationFactory>(createApplication)
   const app = await restartable(createApplication, { logger: true }, fastify)
   expectType<FastifyInstance>(app)
   expectType<boolean>(app.restarted)
+  expectType<boolean>(app.closingRestartable)
   expectType<(restartOpts?: unknown) => Promise<void>>(app.restart)
 }
 

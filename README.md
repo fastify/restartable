@@ -28,7 +28,16 @@ async function createApp (fastify, opts) {
     await app.restart()
     return { status: 'ok' }
   })
-
+  
+  app.addHook('onClose', async () => {
+    if(!app.closingRestartable) {
+      console.log('closing the app because of restart')
+    }
+    else{
+      console.log('closing the app because server is stopping')
+    }
+  })
+  
   return app
 }
 

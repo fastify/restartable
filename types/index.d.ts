@@ -8,6 +8,7 @@ declare module 'fastify' {
     addPreRestartHook: (fn: RestartHook) => void,
     addOnRestartHook: (fn: RestartHook) => void,
     restarted: boolean
+    closingRestartable: boolean
   }
 }
 
