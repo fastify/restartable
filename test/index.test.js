@@ -1,9 +1,9 @@
 'use strict'
 
-const { join } = require('path')
-const { once } = require('events')
-const { readFile } = require('fs/promises')
-const http2 = require('http2')
+const { join } = require('node:path')
+const { once } = require('node:events')
+const { readFile } = require('node:fs/promises')
+const http2 = require('node:http2')
 
 const t = require('tap')
 const split = require('split2')
