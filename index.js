@@ -194,7 +194,7 @@ function restoreClientErrorListeners (server, oldListeners) {
 
 async function executeHooks (hooks, app, opts) {
   for (const hook of hooks) {
-    await hook(app, opts).catch((error) => app.log.error(error))
+    await hook(app, opts)?.catch((error) => app.log.error(error))
   }
 }
 
