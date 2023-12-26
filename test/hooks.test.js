@@ -170,3 +170,30 @@ test('should throw if onRestartHook is not a function', async (t) => {
     app.addOnRestartHook('not a function')
   }, 'onRestartHook must be a function')
 })
+
+test('should not throw if onRestartHook is a sync function', async (t) => {
+  t.plan(3)
+
+  async function createApplication (fastify, opts) {
+    return fastify(opts)
+  }
+
+  const app = await restartable(createApplication, {
+    keepAliveTimeout: 1
+  })
+
+  t.teardown(async () => {
+    await app.close()
+  })
+
+  const expectedRestartOptions = { foo: 'bar' }
+
+  app.addOnRestartHook((app, restartOptions) => {
+    t.equal(app.restarted, true)
+    t.same(restartOptions, expectedRestartOptions)
+  })
+
+  await app.restart(expectedRestartOptions)
+
+  t.equal(app.restarted, true)
+})
