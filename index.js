@@ -35,7 +35,7 @@ async function restartable (factory, opts, fastify = defaultFastify) {
       restoreClientErrorListeners(server, clientErrorListeners)
 
       // In case if fastify.listen() would throw an error
-      // istanbul ignore next
+      /* c8 ignore next 3 */
       if (newApp !== null) {
         await closeApplication(newApp)
       }
@@ -74,7 +74,7 @@ async function restartable (factory, opts, fastify = defaultFastify) {
     function serverFactory (handler, options) {
       // this cause an uncaughtException because of the bug in Fastify
       // see: https://github.com/fastify/fastify/issues/4730
-      // istanbul ignore next
+      /* c8 ignore next 6 */
       if (++createServerCounter > 1) {
         throw new Error(
           'Cannot create multiple server bindings for a restartable application. ' +
@@ -152,14 +152,14 @@ function wrapServer (server) {
   const _close = server.close.bind(server)
   server.close = (cb) => server[closingServer] ? _close(cb) : cb()
 
-  // istanbul ignore next
+  /* c8 ignore next 5 */
   // closeAllConnections was added in Nodejs v18.2.0
   if (server.closeAllConnections) {
     const _closeAllConnections = server.closeAllConnections.bind(server)
     server.closeAllConnections = () => server[closingServer] && _closeAllConnections()
   }
 
-  // istanbul ignore next
+  /* c8 ignore next 5 */
   // closeIdleConnections was added in Nodejs v18.2.0
   if (server.closeIdleConnections) {
     const _closeIdleConnections = server.closeIdleConnections.bind(server)
