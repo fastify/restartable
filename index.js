@@ -144,7 +144,15 @@ function wrapServer (server) {
 
   server.listen = (...args) => {
     const cb = args[args.length - 1]
-    return server.listening ? cb() : _listen(...args)
+    // TODO(mcollina): remove hack for https://github.com/fastify/fastify/pull/5523
+    // istanbul ignore next
+    if (typeof cb === 'function') {
+      return server.listening ? cb() : _listen(...args)
+    } else if (server.listening) {
+      server.emit('listening')
+    } else {
+      return _listen(...args)
+    }
   }
 
   server[closingServer] = false
