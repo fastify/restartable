@@ -143,8 +143,11 @@ function wrapServer (server) {
   const _listen = server.listen.bind(server)
 
   server.listen = (...args) => {
-    const cb = args[args.length - 1]
-    return server.listening ? cb() : _listen(...args)
+    if (server.listening) {
+      server.emit('listening')
+    } else {
+      return _listen(...args)
+    }
   }
 
   server[closingServer] = false
