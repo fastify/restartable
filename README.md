@@ -28,7 +28,7 @@ async function createApp (fastify, opts) {
     await app.restart()
     return { status: 'ok' }
   })
-  
+
   app.addHook('onClose', async () => {
     if(!app.closingRestartable) {
       console.log('closing the app because of restart')
@@ -37,7 +37,7 @@ async function createApp (fastify, opts) {
       console.log('closing the app because server is stopping')
     }
   })
-  
+
   return app
 }
 
@@ -81,7 +81,7 @@ is closed. The hook is called with the new app instance as an argument.
   app.addPreRestartHook(async (app) => {
     console.log('preRestart hook called')
   })
-  
+
   app.addOnRestartHook(async (app) => {
     console.log('onRestart hook called')
   })
