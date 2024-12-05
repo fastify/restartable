@@ -1,7 +1,7 @@
 # @fastify/restartable
 
 [![NPM version](https://img.shields.io/npm/v/@fastify/restartable.svg?style=flat)](https://www.npmjs.com/package/@fastify/restartable)
-![CI](https://github.com/fastify/restartable/workflows/CI/badge.svg)
+[![CI](https://github.com/fastify/restartable/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/fastify/restartable/actions/workflows/ci.yml)
 [![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat)](https://standardjs.com/)
 
 Restart Fastify without losing a request.
