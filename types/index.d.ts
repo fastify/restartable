@@ -1,4 +1,4 @@
-import { fastify, FastifyInstance } from "fastify";
+import { fastify, FastifyInstance } from 'fastify'
 
 import type {
   FastifyBaseLogger,
@@ -13,17 +13,17 @@ import type {
   RawRequestDefaultExpression,
   RawServerBase,
   RawServerDefault,
-} from "fastify";
-import * as http from "http";
-import * as http2 from "http2";
-import * as https from "https";
+} from 'fastify'
+import * as http from 'http'
+import * as http2 from 'http2'
+import * as https from 'https'
 
 export type RestartHook = (
   instance: FastifyInstance,
   restartOpts?: unknown
-) => Promise<unknown>;
+) => Promise<unknown>
 
-declare module "fastify" {
+declare module 'fastify' {
   interface FastifyInstance {
     restart: (restartOpts?: unknown) => Promise<void>;
     addPreRestartHook: (fn: RestartHook) => void;
@@ -33,7 +33,7 @@ declare module "fastify" {
   }
 }
 
-type Fastify = typeof fastify;
+type Fastify = typeof fastify
 
 export type ApplicationFactory<
   Server extends
@@ -52,15 +52,15 @@ export type ApplicationFactory<
     ? S extends http2.Http2SecureServer
       ? FastifyHttp2SecureOptions<S, Logger>
       : S extends http2.Http2Server
-      ? FastifyHttp2Options<S, Logger>
-      : S extends https.Server
-      ? FastifyHttpsOptions<S, Logger>
-      : S extends http.Server
-      ? FastifyHttpOptions<S, Logger>
-      : FastifyServerOptions<Server>
+        ? FastifyHttp2Options<S, Logger>
+        : S extends https.Server
+          ? FastifyHttpsOptions<S, Logger>
+          : S extends http.Server
+            ? FastifyHttpOptions<S, Logger>
+            : FastifyServerOptions<Server>
     : FastifyServerOptions<Server>,
   restartOpts?: unknown
-) => Promise<FastifyInstance<Server, Request, Reply, Logger, TypeProvider>>;
+) => Promise<FastifyInstance<Server, Request, Reply, Logger, TypeProvider>>
 
 // These overloads follow the same overloads for the fastify factory
 
@@ -70,11 +70,11 @@ export declare function restartable<
   Reply extends RawReplyDefaultExpression<Server> = RawReplyDefaultExpression<Server>,
   Logger extends FastifyBaseLogger = FastifyBaseLogger,
   TypeProvider extends FastifyTypeProvider = FastifyTypeProviderDefault
->(
+> (
   factory: ApplicationFactory<Server, Request, Reply, Logger, TypeProvider>,
   opts?: FastifyHttp2SecureOptions<Server, Logger>,
   fastify?: Fastify
-): Promise<FastifyInstance<Server, Request, Reply, Logger, TypeProvider>>;
+): Promise<FastifyInstance<Server, Request, Reply, Logger, TypeProvider>>
 
 export declare function restartable<
   Server extends http2.Http2Server,
@@ -82,11 +82,11 @@ export declare function restartable<
   Reply extends RawReplyDefaultExpression<Server> = RawReplyDefaultExpression<Server>,
   Logger extends FastifyBaseLogger = FastifyBaseLogger,
   TypeProvider extends FastifyTypeProvider = FastifyTypeProviderDefault
->(
+> (
   factory: ApplicationFactory<Server, Request, Reply, Logger, TypeProvider>,
   opts?: FastifyHttp2Options<Server, Logger>,
   fastify?: Fastify
-): Promise<FastifyInstance<Server, Request, Reply, Logger, TypeProvider>>;
+): Promise<FastifyInstance<Server, Request, Reply, Logger, TypeProvider>>
 
 export declare function restartable<
   Server extends https.Server,
@@ -94,11 +94,11 @@ export declare function restartable<
   Reply extends RawReplyDefaultExpression<Server> = RawReplyDefaultExpression<Server>,
   Logger extends FastifyBaseLogger = FastifyBaseLogger,
   TypeProvider extends FastifyTypeProvider = FastifyTypeProviderDefault
->(
+> (
   factory: ApplicationFactory<Server, Request, Reply, Logger, TypeProvider>,
   opts?: FastifyHttpsOptions<Server, Logger>,
   fastify?: Fastify
-): Promise<FastifyInstance<Server, Request, Reply, Logger, TypeProvider>>;
+): Promise<FastifyInstance<Server, Request, Reply, Logger, TypeProvider>>
 
 export declare function restartable<
   Server extends http.Server,
@@ -106,8 +106,8 @@ export declare function restartable<
   Reply extends RawReplyDefaultExpression<Server> = RawReplyDefaultExpression<Server>,
   Logger extends FastifyBaseLogger = FastifyBaseLogger,
   TypeProvider extends FastifyTypeProvider = FastifyTypeProviderDefault
->(
+> (
   factory: ApplicationFactory<Server, Request, Reply, Logger, TypeProvider>,
   opts?: FastifyHttpOptions<Server, Logger>,
   fastify?: Fastify
-): Promise<FastifyInstance<Server, Request, Reply, Logger, TypeProvider>>;
+): Promise<FastifyInstance<Server, Request, Reply, Logger, TypeProvider>>

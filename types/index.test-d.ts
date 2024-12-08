@@ -1,7 +1,7 @@
 import { fastify, FastifyInstance, FastifyServerOptions } from 'fastify'
 import { expectAssignable, expectType } from 'tsd'
 import { restartable, ApplicationFactory } from './index'
-import type { Http2Server } from "http2"
+import type { Http2Server } from 'http2'
 
 type Fastify = typeof fastify
 

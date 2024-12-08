@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "lint": "standard | snazzy",
-    "lint:fix": "standard --fix",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
     "test": "npm run test:unit && npm run test:typescript",
     "test:typescript": "tsd",
     "test:unit": "tap"
@@ -31,9 +31,8 @@
   "devDependencies": {
     "@fastify/pre-commit": "^2.1.0",
     "@types/node": "^22.0.0",
-    "snazzy": "^9.0.0",
+    "neostandard": "^0.11.9",
     "split2": "^4.2.0",
-    "standard": "^17.1.0",
     "tap": "^18.7.2",
     "tsd": "^0.31.0",
     "undici": "^7.0.0"
