@@ -1,5 +1,6 @@
 import { fastify, FastifyInstance, FastifyServerOptions } from 'fastify'
 import { expectAssignable, expectType } from 'tsd'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- ApplicationFactory is used in commented out test
 import { restartable, ApplicationFactory } from './index'
 import type { Http2Server } from 'http2'
 
