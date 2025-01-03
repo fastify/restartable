@@ -5,7 +5,7 @@ const { once } = require('node:events')
 const { readFile } = require('node:fs/promises')
 const http2 = require('node:http2')
 
-const t = require('tap')
+const { afterEach, test } = require('node:test')
 const split = require('split2')
 const { request, setGlobalDispatcher, Agent } = require('undici')
 
@@ -21,9 +21,7 @@ setGlobalDispatcher(new Agent({
 
 const COMMON_PORT = 4242
 
-const test = t.test
-t.jobs = 1
-t.afterEach(async () => {
+afterEach(async () => {
   await new Promise((resolve) => setTimeout(resolve, 10))
 })
 
@@ -42,28 +40,28 @@ test('should create and restart fastify app', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
   const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
-  t.equal(host, `http://127.0.0.1:${COMMON_PORT}`)
-  t.equal(app.addresses()[0].address, '127.0.0.1')
-  t.equal(app.addresses()[0].port, COMMON_PORT)
+  t.assert.strictEqual(host, `http://127.0.0.1:${COMMON_PORT}`)
+  t.assert.strictEqual(app.addresses()[0].address, '127.0.0.1')
+  t.assert.strictEqual(app.addresses()[0].port, COMMON_PORT)
 
-  t.equal(app.restarted, false)
+  t.assert.strictEqual(app.restarted, false)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 
   await app.restart()
-  t.same(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 })
 
@@ -84,8 +82,8 @@ test('should create and restart fastify app twice', async (t) => {
       if (++closeCounter > 1) {
         t.fail('onClose hook called more than once')
       }
-      t.equal(app.closingRestartable, closingRestartable)
-      t.pass('onClose hook called')
+      t.assert.strictEqual(app.closingRestartable, closingRestartable)
+      t.assert.ok('onClose hook called')
     })
 
     return app
@@ -96,31 +94,31 @@ test('should create and restart fastify app twice', async (t) => {
   })
 
   const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
-  t.equal(host, `http://127.0.0.1:${COMMON_PORT}`)
-  t.equal(app.addresses()[0].address, '127.0.0.1')
-  t.equal(app.addresses()[0].port, COMMON_PORT)
+  t.assert.strictEqual(host, `http://127.0.0.1:${COMMON_PORT}`)
+  t.assert.strictEqual(app.addresses()[0].address, '127.0.0.1')
+  t.assert.strictEqual(app.addresses()[0].port, COMMON_PORT)
 
-  t.equal(app.restarted, false)
+  t.assert.strictEqual(app.restarted, false)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 
   await app.restart()
-  t.same(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 
   await app.restart()
-  t.same(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 
   closingRestartable = true
@@ -148,26 +146,26 @@ test('should create and restart fastify https app', async (t) => {
   }
   const app = await restartable(createApplication, opts)
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
   const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
-  t.equal(host, `https://127.0.0.1:${COMMON_PORT}`)
-  t.equal(app.addresses()[0].address, '127.0.0.1')
-  t.equal(app.addresses()[0].port, COMMON_PORT)
+  t.assert.strictEqual(host, `https://127.0.0.1:${COMMON_PORT}`)
+  t.assert.strictEqual(app.addresses()[0].address, '127.0.0.1')
+  t.assert.strictEqual(app.addresses()[0].port, COMMON_PORT)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 
   await app.restart()
-  t.same(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 })
 
@@ -189,18 +187,18 @@ test('should create and restart fastify http2 app', async (t) => {
   }
   const app = await restartable(createApplication, opts)
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
   const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
-  t.equal(host, `http://127.0.0.1:${COMMON_PORT}`)
-  t.equal(app.addresses()[0].address, '127.0.0.1')
-  t.equal(app.addresses()[0].port, COMMON_PORT)
+  t.assert.strictEqual(host, `http://127.0.0.1:${COMMON_PORT}`)
+  t.assert.strictEqual(app.addresses()[0].address, '127.0.0.1')
+  t.assert.strictEqual(app.addresses()[0].port, COMMON_PORT)
 
   const client = http2.connect(host)
 
-  t.teardown(() => {
+  t.after(() => {
     client.close()
   })
 
@@ -213,11 +211,11 @@ test('should create and restart fastify http2 app', async (t) => {
     await once(req, 'end')
     req.end()
 
-    t.same(JSON.parse(data), { hello: 'world' })
+    t.assert.deepStrictEqual(JSON.parse(data), { hello: 'world' })
   }
 
   await app.restart()
-  t.same(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 
   {
     const req = client.request({ ':path': '/' })
@@ -228,7 +226,7 @@ test('should create and restart fastify http2 app', async (t) => {
     await once(req, 'end')
     req.end()
 
-    t.same(JSON.parse(data), { hello: 'world' })
+    t.assert.deepStrictEqual(JSON.parse(data), { hello: 'world' })
   }
 })
 
@@ -253,17 +251,17 @@ test('should create and restart fastify https2 app', async (t) => {
   }
   const app = await restartable(createApplication, opts)
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
   const host = await app.listen({ host: '127.0.0.1', port: COMMON_PORT })
-  t.equal(host, `https://127.0.0.1:${COMMON_PORT}`)
-  t.equal(app.addresses()[0].address, '127.0.0.1')
-  t.equal(app.addresses()[0].port, COMMON_PORT)
+  t.assert.strictEqual(host, `https://127.0.0.1:${COMMON_PORT}`)
+  t.assert.strictEqual(app.addresses()[0].address, '127.0.0.1')
+  t.assert.strictEqual(app.addresses()[0].port, COMMON_PORT)
 
   await app.restart()
-  t.same(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 })
 
 test('should restart an app from a route handler', async (t) => {
@@ -282,7 +280,7 @@ test('should restart an app from a route handler', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
@@ -290,14 +288,14 @@ test('should restart an app from a route handler', async (t) => {
 
   {
     const res = await request(`${host}/restart`)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 
-  t.same(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 
   {
     const res = await request(`${host}/restart`)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 })
 
@@ -316,19 +314,19 @@ test('should restart an app from inject call', async (t) => {
   const app = await restartable(createApplication, {
     keepAliveTimeout: 1
   })
-  t.same(app.server.listening, false)
+  t.assert.deepStrictEqual(app.server.listening, false)
 
   {
     const res = await app.inject('/restart')
-    t.same(res.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(res.json(), { hello: 'world' })
   }
 
-  t.same(app.restarted, true)
-  t.same(app.server.listening, false)
+  t.assert.deepStrictEqual(app.restarted, true)
+  t.assert.deepStrictEqual(app.server.listening, false)
 
   {
     const res = await app.inject('/restart')
-    t.same(res.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(res.json(), { hello: 'world' })
   }
 })
 
@@ -351,7 +349,7 @@ test('logger', async (t) => {
 
   const app = await restartable(createApplication, opts)
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
@@ -359,8 +357,8 @@ test('logger', async (t) => {
 
   {
     const [{ level, msg }] = await once(stream, 'data')
-    t.equal(level, 30)
-    t.equal(msg, `Server listening at ${host}`)
+    t.assert.strictEqual(level, 30)
+    t.assert.strictEqual(msg, `Server listening at ${host}`)
   }
 })
 
@@ -379,7 +377,7 @@ test('should save new default options after restart', async (t) => {
 
   async function createApplication (fastify, opts) {
     const expected = expectedOpts[restartCounter++]
-    t.same(opts, expected)
+    t.assert.deepStrictEqual(opts, expected)
 
     const newOpts = expectedOpts[restartCounter]
     const app = fastify(newOpts)
@@ -393,7 +391,7 @@ test('should save new default options after restart', async (t) => {
 
   const app = await restartable(createApplication, opts1)
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
@@ -410,7 +408,7 @@ test('should send a restart options', async (t) => {
 
   async function createApplication (fastify, opts, restartOpts) {
     const expected = expectedOpts[restartCounter++]
-    t.same(restartOpts, expected)
+    t.assert.deepStrictEqual(restartOpts, expected)
 
     const app = fastify(opts)
 
@@ -425,7 +423,7 @@ test('should send a restart options', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
@@ -450,13 +448,13 @@ test('no warnings', async (t) => {
 
   process.on('warning', onWarning)
 
-  t.teardown(async () => {
+  t.after(async () => {
     process.removeListener('warning', onWarning)
   })
 
   const app = await restartable(createApplication)
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
@@ -490,9 +488,9 @@ test('should not restart fastify after a failed start', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.same(app.restarted, false)
+  t.assert.deepStrictEqual(app.restarted, false)
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
@@ -500,20 +498,20 @@ test('should not restart fastify after a failed start', async (t) => {
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 
-  await t.rejects(app.restart())
+  await t.assert.rejects(app.restart())
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 
   await app.restart()
 
   const res = await request(host, { method: 'GET' })
-  t.same(await res.body.json(), { hello: 'world' })
+  t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
 })
 
 test('should create and restart fastify app with forceCloseConnections', async (t) => {
@@ -532,24 +530,24 @@ test('should create and restart fastify app with forceCloseConnections', async (
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
   const host = await app.listen({ host: '127.0.0.1', port: 0 })
-  t.equal(app.restarted, false)
+  t.assert.strictEqual(app.restarted, false)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 
   await app.restart()
-  t.same(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 })
 
@@ -561,7 +559,7 @@ test('should not set the server handler before application is ready', async (t) 
 
     if (app.restarted) {
       const res = await request(host)
-      t.same(await res.body.json(), { version: 1 })
+      t.assert.deepStrictEqual(await res.body.json(), { version: 1 })
     }
 
     app.get('/', async () => {
@@ -576,7 +574,7 @@ test('should not set the server handler before application is ready', async (t) 
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
@@ -584,15 +582,15 @@ test('should not set the server handler before application is ready', async (t) 
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { version: 1 })
+    t.assert.deepStrictEqual(await res.body.json(), { version: 1 })
   }
 
   await app.restart()
-  t.same(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { version: 2 })
+    t.assert.deepStrictEqual(await res.body.json(), { version: 2 })
   }
 })
 
@@ -616,7 +614,7 @@ test('should not restart an application multiple times simultaneously', async (t
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
@@ -630,12 +628,12 @@ test('should not restart an application multiple times simultaneously', async (t
     app.restart()
   ])
 
-  t.same(app.restarted, true)
-  t.same(startCounter, 2)
+  t.assert.deepStrictEqual(app.restarted, true)
+  t.assert.deepStrictEqual(startCounter, 2)
 
   {
     const res = await request(host)
-    t.same(await res.body.json(), { hello: 'world' })
+    t.assert.deepStrictEqual(await res.body.json(), { hello: 'world' })
   }
 })
 
@@ -646,7 +644,7 @@ test('should contain a persistentRef property', async (t) => {
     const app = fastify(opts)
 
     if (app.restarted) {
-      t.equal(app.persistentRef, proxy)
+      t.assert.strictEqual(app.persistentRef, proxy)
     } else {
       firstPersistentRef = app.persistentRef
     }
@@ -658,19 +656,19 @@ test('should contain a persistentRef property', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.equal(firstPersistentRef, proxy)
+  t.assert.strictEqual(firstPersistentRef, proxy)
 
-  t.teardown(async () => {
+  t.after(async () => {
     await proxy.close()
   })
 
   await proxy.listen({ host: '127.0.0.1', port: 0 })
 
-  t.equal(proxy.persistentRef, proxy)
+  t.assert.strictEqual(proxy.persistentRef, proxy)
 
   await proxy.restart()
 
-  t.equal(proxy.persistentRef, proxy)
+  t.assert.strictEqual(proxy.persistentRef, proxy)
 })
 
 test('server close event should be emitted only when after closing server', async (t) => {
@@ -685,10 +683,10 @@ test('server close event should be emitted only when after closing server', asyn
   })
   await app.listen({ host: '127.0.0.1', port: 0 })
 
-  t.ok(app.server.listening)
+  t.assert.ok(app.server.listening)
 
   app.server.on('close', () => {
-    t.pass('server close event emitted')
+    t.assert.ok('server close event emitted')
   })
 
   await app.restart()
@@ -716,13 +714,13 @@ test('should close application during the restart', async (t) => {
   })
   await app.listen({ host: '127.0.0.1', port: 0 })
 
-  t.ok(app.server.listening)
+  t.assert.ok(app.server.listening)
 
   app.restart()
   await new Promise((resolve) => setTimeout(resolve, 500))
   await app.close()
 
-  t.ok(!app.server.listening)
+  t.assert.ok(!app.server.listening)
 })
 
 test('should restart an app before listening', async (t) => {
@@ -735,11 +733,11 @@ test('should restart an app before listening', async (t) => {
   })
 
   await app.restart()
-  t.ok(app.restarted)
+  t.assert.ok(app.restarted)
 
   await app.listen({ host: '127.0.0.1', port: 0 })
-  t.ok(app.server.listening)
+  t.assert.ok(app.server.listening)
 
   await app.close()
-  t.ok(!app.server.listening)
+  t.assert.ok(!app.server.listening)
 })
