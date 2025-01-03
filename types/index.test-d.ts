@@ -69,6 +69,6 @@ async function createApplication (
 
 {
   const app = await restartable(createApplication, { logger: true }, fastify)
-  app.addPreRestartHook(async (instance: FastifyInstance, restartOpts: unknown) => {})
-  app.addOnRestartHook(async (instance: FastifyInstance, restartOpts: unknown) => {})
+  app.addPreRestartHook(async (_instance: FastifyInstance, _restartOpts: unknown) => {})
+  app.addOnRestartHook(async (_instance: FastifyInstance, _restartOpts: unknown) => {})
 }
