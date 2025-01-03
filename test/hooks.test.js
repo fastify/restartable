@@ -85,7 +85,7 @@ test('should throw if preRestartHook is not a function', async (t) => {
 
   t.assert.throws(() => {
     app.addPreRestartHook('not a function')
-  }, { message: 'The hook must be a function'})
+  }, { message: 'The hook must be a function' })
 })
 
 test('should trigger onRestartHook', async (t) => {
@@ -166,7 +166,7 @@ test('should throw if onRestartHook is not a function', async (t) => {
 
   t.assert.throws(() => {
     app.addOnRestartHook('not a function')
-  }, { message: 'The hook must be a function'})
+  }, { message: 'The hook must be a function' })
 })
 
 test('should not throw if onRestartHook is a sync function', async (t) => {
