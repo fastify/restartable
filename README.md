@@ -61,7 +61,7 @@ process.once('SIGINT', () => {
 
 ## Hooks
 
-- `preRestart` - called before the creating a new app instance and closing an
+- `preRestart` - called before creating a new app instance and closing an
 existing one. The hook is called with the current app instance as an argument.
 Use it to close any resources that you don't want to be shared between the
 app instances.
@@ -99,4 +99,4 @@ onRestart hook called
 
 ## License
 
-MIT
+Licensed under [MIT](./LICENSE).
