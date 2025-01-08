@@ -1,15 +1,13 @@
 'use strict'
 
-const t = require('tap')
+const { test } = require('node:test')
 const { restartable } = require('..')
 
-const test = t.test
-t.jobs = 1
-t.afterEach(async () => {
+test.afterEach(async () => {
   await new Promise((resolve) => setTimeout(resolve, 10))
 })
 
-test('should trigger preRestartHook', async (t) => {
+test('should trigger preRestartHook', { concurrency: 1 }, async (t) => {
   t.plan(4)
 
   async function createApplication (fastify, opts) {
@@ -20,20 +18,20 @@ test('should trigger preRestartHook', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
   const expectedRestartOptions = { foo: 'bar' }
 
   app.addPreRestartHook(async (app, restartOptions) => {
-    t.equal(app.restarted, false)
-    t.same(restartOptions, expectedRestartOptions)
+    t.assert.deepStrictEqual(app.restarted, false)
+    t.assert.deepStrictEqual(restartOptions, expectedRestartOptions)
   })
 
   app.addPreRestartHook(async (app, restartOptions) => {
-    t.equal(app.restarted, false)
-    t.same(restartOptions, expectedRestartOptions)
+    t.assert.deepStrictEqual(app.restarted, false)
+    t.assert.deepStrictEqual(restartOptions, expectedRestartOptions)
   })
 
   await app.restart(expectedRestartOptions)
@@ -50,7 +48,7 @@ test('should not fail preRestartHook throw an error', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
@@ -61,13 +59,13 @@ test('should not fail preRestartHook throw an error', async (t) => {
   })
 
   app.addPreRestartHook(async (app, restartOptions) => {
-    t.equal(app.restarted, false)
-    t.same(restartOptions, expectedRestartOptions)
+    t.assert.deepStrictEqual(app.restarted, false)
+    t.assert.deepStrictEqual(restartOptions, expectedRestartOptions)
   })
 
   await app.restart(expectedRestartOptions)
 
-  t.equal(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 })
 
 test('should throw if preRestartHook is not a function', async (t) => {
@@ -81,11 +79,11 @@ test('should throw if preRestartHook is not a function', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
-  t.throws(() => {
+  t.assert.throws(() => {
     app.addPreRestartHook('not a function')
   }, 'preRestartHook must be a function')
 })
@@ -101,20 +99,20 @@ test('should trigger onRestartHook', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
   const expectedRestartOptions = { foo: 'bar' }
 
   app.addOnRestartHook(async (app, restartOptions) => {
-    t.equal(app.restarted, true)
-    t.same(restartOptions, expectedRestartOptions)
+    t.assert.deepStrictEqual(app.restarted, true)
+    t.assert.deepStrictEqual(restartOptions, expectedRestartOptions)
   })
 
   app.addOnRestartHook(async (app, restartOptions) => {
-    t.equal(app.restarted, true)
-    t.same(restartOptions, expectedRestartOptions)
+    t.assert.deepStrictEqual(app.restarted, true)
+    t.assert.deepStrictEqual(restartOptions, expectedRestartOptions)
   })
 
   await app.restart(expectedRestartOptions)
@@ -131,7 +129,7 @@ test('should not fail onRestartHook throw an error', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
@@ -142,13 +140,13 @@ test('should not fail onRestartHook throw an error', async (t) => {
   })
 
   app.addOnRestartHook(async (app, restartOptions) => {
-    t.equal(app.restarted, true)
-    t.same(restartOptions, expectedRestartOptions)
+    t.assert.deepStrictEqual(app.restarted, true)
+    t.assert.deepStrictEqual(restartOptions, expectedRestartOptions)
   })
 
   await app.restart(expectedRestartOptions)
 
-  t.equal(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 })
 
 test('should throw if onRestartHook is not a function', async (t) => {
@@ -162,11 +160,11 @@ test('should throw if onRestartHook is not a function', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
-  t.throws(() => {
+  t.assert.throws(() => {
     app.addOnRestartHook('not a function')
   }, 'onRestartHook must be a function')
 })
@@ -182,18 +180,18 @@ test('should not throw if onRestartHook is a sync function', async (t) => {
     keepAliveTimeout: 1
   })
 
-  t.teardown(async () => {
+  t.after(async () => {
     await app.close()
   })
 
   const expectedRestartOptions = { foo: 'bar' }
 
   app.addOnRestartHook((app, restartOptions) => {
-    t.equal(app.restarted, true)
-    t.same(restartOptions, expectedRestartOptions)
+    t.assert.deepStrictEqual(app.restarted, true)
+    t.assert.deepStrictEqual(restartOptions, expectedRestartOptions)
   })
 
   await app.restart(expectedRestartOptions)
 
-  t.equal(app.restarted, true)
+  t.assert.deepStrictEqual(app.restarted, true)
 })
