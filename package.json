@@ -8,7 +8,7 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "test": "npm run test:unit && npm run test:typescript",
-    "test:typescript": "tsd",
+    "test:typescript": "tstyche",
     "test:unit": "c8 --100 node --test"
   },
   "types": "types/index.d.ts",
@@ -63,7 +63,7 @@
     "eslint": "^9.17.0",
     "neostandard": "^0.12.0",
     "split2": "^4.2.0",
-    "tsd": "^0.33.0",
+    "tstyche": "^7.0.0",
     "undici": "^7.0.0"
   },
   "dependencies": {
