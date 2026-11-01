@@ -7,8 +7,10 @@
 Restart Fastify without losing a request.
 
 This module is useful if you want to compose the
-fastify routes dynamically or you need some remote
-config. In case of a change, you can restart Fastify.
+fastify routes dynamically (for example, from a database or a configuration file)
+or you need some remote config. In case of a change, you can restart Fastify.
+
+> **Note:** `@fastify/restartable` re-executes the application factory function in the same Node.js process; it does **not** reload JavaScript/TypeScript files from disk (such as route or plugin modules loaded via `import`, `require`, or `@fastify/autoload`). If you need to hot-reload module code from disk, you must manage module cache invalidation or worker isolation yourself.
 
 ## Install
 
@@ -95,6 +97,24 @@ is closed. The hook is called with the new app instance as an argument.
 preRestart hook called
 creating new app instance
 onRestart hook called
+```
+
+## Using with a Fastify Plugin (`fastify-cli` style)
+
+Because `@fastify/restartable` manages the underlying HTTP server and creates a new Fastify instance on each restart via a custom `serverFactory`, it cannot be started directly via `fastify start app.js`. However, if your application is structured as a Fastify plugin (like a `fastify-cli` `app.js` entry point), you can register that plugin inside the factory function passed to `restartable`:
+
+```js
+import { restartable } from '@fastify/restartable'
+import appPlugin from './app.js'
+
+async function createApp (fastify, opts) {
+  const app = fastify(opts)
+  await app.register(appPlugin, opts)
+  return app
+}
+
+const app = await restartable(createApp, { logger: true })
+await app.listen({ port: 3000 })
 ```
 
 ## License
